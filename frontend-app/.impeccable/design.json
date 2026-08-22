@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-25T00:00:00Z",
+  "title": "Design System: LawGPT AI",
+  "extensions": {
+    "colorMeta": {
+      "forest-primary": { "role": "primary", "displayName": "Counsel Forest", "canonical": "oklch(38% 0.06 155)", "tonalRamp": ["#0A1712", "#0F2B21", "#1F4C3C", "#2C6E52", "#4B8B71", "#7FAD98", "#BBD3C7", "#E7F0EB"] },
+      "brass-accent": { "role": "secondary", "displayName": "Brass Seal", "canonical": "oklch(56% 0.09 75)", "tonalRamp": ["#2C2213", "#4E3D21", "#6F5730", "#98753A", "#B3925C", "#CBB186", "#E2D5B9", "#F3ECDD"] },
+      "paper": { "role": "neutral", "displayName": "Desk Paper", "canonical": "oklch(97% 0.008 80)", "tonalRamp": ["#15130F", "#3A342A", "#6B6252", "#A69C89", "#D6D0C4", "#E9E5DB", "#F3F1EA", "#F9F8F6"] },
+      "ink": { "role": "neutral", "displayName": "Desk Ink", "canonical": "oklch(21% 0.015 260)", "tonalRamp": ["#0A0B0F", "#15171E", "#262A35", "#3C4150", "#5B6172", "#848AA0", "#B7BBCA", "#E6E8EF"] },
+      "signal-red": { "role": "error", "displayName": "Filing Red", "canonical": "oklch(47% 0.17 27)", "tonalRamp": ["#2E0E08", "#5C1B10", "#8A2818", "#CA3221", "#DD5F4C", "#E98F80", "#F3BFB6", "#FAE1DC"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines and page-defining moments only, h1 scale." },
+      "headline": { "displayName": "Headline", "purpose": "Section titles, h2." },
+      "title": { "displayName": "Title", "purpose": "Card and panel titles, h3." },
+      "body": { "displayName": "Body", "purpose": "All reading copy, 65-75ch max line length." },
+      "label": { "displayName": "Label", "purpose": "Stats, timestamps, case/document identifiers, record data." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgba(20,23,31,0.04), 0 1px 1px rgba(20,23,31,0.03)", "purpose": "Resting shadow on bordered surfaces." },
+      { "name": "card-hover", "value": "0 4px 16px rgba(20,23,31,0.08), 0 1px 2px rgba(20,23,31,0.04)", "purpose": "Interaction-only feedback shadow." }
+    ],
+    "motion": [
+      { "name": "fade-in", "value": "0.4s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Sparing page-mount entrance, translateY(8px) to 0." },
+      { "name": "slide-in", "value": "0.4s cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Sparing page-mount entrance, translateX(-12px) to 0." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "2xl", "value": "1400px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call to action. Solid Counsel Forest, used once per view for the primary action.",
+      "html": "<button class=\"ds-btn-primary\">Get started</button>",
+      "css": ".ds-btn-primary { background: #1F4C3C; color: #F9F8F6; padding: 8px 16px; height: 40px; border-radius: 8px; font-family: Inter, sans-serif; font-weight: 500; font-size: 14px; border: none; transition: background 0.2s ease-out; } .ds-btn-primary:hover { background: #2C6E52; } .ds-btn-primary:focus-visible { outline: 2px solid #1F4C3C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action, bordered, paper background.",
+      "html": "<button class=\"ds-btn-secondary\">Learn more</button>",
+      "css": ".ds-btn-secondary { background: #F9F8F6; color: #15171E; padding: 8px 16px; height: 40px; border-radius: 8px; border: 1px solid #E5E2DC; font-family: Inter, sans-serif; font-weight: 500; font-size: 14px; transition: background 0.2s ease-out; } .ds-btn-secondary:hover { background: #EFECE7; } .ds-btn-secondary:focus-visible { outline: 2px solid #1F4C3C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Record Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat bordered card used across dashboard, cases, documents. Shadow appears only on hover.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-label\">CASE-2024-0142</div><h3 class=\"ds-card-title\">Nair v. Coastal Freight Ltd.</h3><p class=\"ds-card-body\">Next hearing scheduled in 14 days.</p></div>",
+      "css": ".ds-card { background: #FFFFFF; border: 1px solid #E5E2DC; border-radius: 10px; padding: 24px; box-shadow: 0 1px 2px rgba(20,23,31,0.04), 0 1px 1px rgba(20,23,31,0.03); transition: box-shadow 0.2s ease-out; } .ds-card:hover { box-shadow: 0 4px 16px rgba(20,23,31,0.08), 0 1px 2px rgba(20,23,31,0.04); } .ds-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.02em; color: #98753A; margin-bottom: 8px; } .ds-card-title { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; color: #15171E; margin-bottom: 8px; } .ds-card-body { font-family: Inter, sans-serif; font-size: 15px; line-height: 1.6; color: #5B6172; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard field with icon slot, used in search and forms.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search cases, documents, clauses\" />",
+      "css": ".ds-input { background: #F9F8F6; border: 1px solid #E5E2DC; border-radius: 8px; padding: 8px 12px; font-family: Inter, sans-serif; font-size: 15px; color: #15171E; width: 100%; transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out; } .ds-input::placeholder { color: #5B6172; } .ds-input:focus { outline: none; border-color: #1F4C3C; box-shadow: 0 0 0 3px rgba(31,76,60,0.15); }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Fixed top nav with backdrop blur, hairline bottom border.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-logo\">LawGPT</span><a class=\"ds-nav-link\" href=\"#\">Product</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 24px; background: rgba(249,248,246,0.95); backdrop-filter: blur(8px); border-bottom: 1px solid #E5E2DC; } .ds-nav-logo { font-family: 'Source Serif 4', serif; font-weight: 600; font-size: 18px; color: #15171E; } .ds-nav-link { font-family: Inter, sans-serif; font-size: 14px; color: #5B6172; text-decoration: none; transition: color 0.2s ease-out; } .ds-nav-link:hover { color: #15171E; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Counsel's Desk",
+    "overview": "LawGPT AI reads as a premium digital workspace where trusted legal counsel meets modern AI, not a generic AI-startup dashboard. The system pulls from paper, ink, and brass: the physical materials of a lawyer's desk, translated into software with restraint. Typography carries authority (a serif display face used sparingly for headlines), while the working surface stays quiet, warm-neutral paper, near-black ink text, a single deep-forest accent for action, a brass highlight reserved for rare emphasis. This system explicitly rejects the generic AI-startup toolkit: no gradient blobs, no glassmorphism, no neon or purple-blue 'AI' accent colors, no floating glowing cards, no hero-metric templates with gradient text.",
+    "keyCharacteristics": [
+      "Warm paper background, never stark white or cold gray",
+      "One accent (forest green) carries almost all action color; brass is a rare highlight, not a second primary",
+      "Serif display type for authority, sans body for readability, mono for anything record-like",
+      "Flat surfaces at rest; elevation is a response to interaction, not a permanent decoration",
+      "Motion is restrained and purposeful: entrances fade/slide once, nothing loops or glows"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Forest green is the only color that means 'action' anywhere in the product.", "section": "colors" },
+      { "name": "The Brass Scarcity Rule", "body": "Brass appears at most once per screen, marking the single most important verified/emphasized element.", "section": "colors" },
+      { "name": "The Serif Restraint Rule", "body": "Source Serif 4 appears only at h1-h3 scale, never in body copy, buttons, or labels.", "section": "typography" },
+      { "name": "The Flat-at-Rest Rule", "body": "Nothing above resting card shadow unless a user is actively hovering or focusing it.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the page background warm paper (#F9F8F6), never stark white or cold gray.",
+      "Do use Counsel Forest as the only action/accent color; let brass appear at most once per screen.",
+      "Do use Source Serif 4 only at heading scale (h1-h3); everything else is Inter or IBM Plex Mono.",
+      "Do keep shadows flat at rest; only add card-hover in response to actual hover/focus interaction.",
+      "Do use IBM Plex Mono for stats, case numbers, and timestamps so records read as precise, not decorative.",
+      "Do respect prefers-reduced-motion for any new motion."
+    ],
+    "donts": [
+      "Don't use gradient blobs, glassmorphism, or blue/purple 'AI startup' accent colors.",
+      "Don't build hero-metric templates (big number, small label, gradient accent) as the default hero shape.",
+      "Don't add tiny uppercase tracked eyebrows above every section, or numbered 01/02/03 scaffolding unless the content is a real, ordered sequence.",
+      "Don't use border-left/border-right colored stripes as a card or callout accent.",
+      "Don't let anything float permanently: no persistent shadow, glow, or 'lifted' card at rest.",
+      "Don't introduce a second saturated accent color alongside Counsel Forest."
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: lawgpt-backend:latest
+    container_name: lawgpt_backend_container
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+      - ./backend/generated:/app/generated
+      - ./backend/temp:/app/temp
+      - ./backend/data:/app/data
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+    restart: unless-stopped

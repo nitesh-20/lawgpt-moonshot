@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Razorpay Inspired Enterprise Light Theme */
+    --background: 210 40% 98%; /* #F8FAFC */
+    --foreground: 222 47% 11%; /* #0F172A */
+    
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 221.2 83.2% 53.3%; /* #2563EB - Razorpay Primary Blue */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 40% 96.1%; /* #F1F5F9 - Muted Background */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B */
+    
+    --accent: 217.2 91.2% 59.8%; /* #60A5FA */
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84.2% 60.2%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 214.3 32% 91.4%; /* #E2E8F0 */
+    --input: 214.3 32% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    
+    --radius: 0.75rem; /* Rounded 12px */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border selection:bg-primary/20;
+  }
+
+  html, body {
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    scroll-behavior: smooth;
+  }
+
+  body:not(.landing-dark) {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+  }
+
+  body.landing-dark {
+    background-color: #050506 !important;
+    color: #f8f8f6 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-sans font-bold text-neutral-900;
+  }
+
+  h1 { @apply text-3xl; }
+  h2 { @apply text-xl; }
+  h3 { @apply text-lg; }
+
+  :focus-visible {
+    outline: 1px solid hsl(var(--ring));
+    outline-offset: 1px;
+  }
+}
+
+/* ========================================================
+   GLOBAL BRAND REDESIGN OVERRIDES (RAZORPAY LIGHT THEME)
+   ======================================================== */
+
+/* General background wrappers override */
+body:not(.landing-dark) .min-h-screen, 
+body:not(.landing-dark) .bg-background,
+body:not(.landing-dark) .bg-slate-900\/50,
+body:not(.landing-dark) .bg-neutral-950,
+body:not(.landing-dark) .bg-\[\#050505\],
+body:not(.landing-dark) .bg-\[\#0d0d0d\],
+body:not(.landing-dark) .bg-\[\#090909\] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* White elements & cards override */
+body:not(.landing-dark) .bg-white,
+body:not(.landing-dark) .bg-slate-900,
+body:not(.landing-dark) .bg-\[\#101010\],
+body:not(.landing-dark) .bg-\[\#151515\] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body:not(.landing-dark) .bg-neutral-50,
+body:not(.landing-dark) .bg-slate-50,
+body:not(.landing-dark) .bg-slate-100,
+body:not(.landing-dark) .bg-neutral-100 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Soft card shadow overrides */
+body:not(.landing-dark) .glass-card,
+body:not(.landing-dark) .card,
+body:not(.landing-dark) .bg-white.border,
+body:not(.landing-dark) .bg-\[\#101010\].border,
+body:not(.landing-dark) [class*="rounded-xl"],
+body:not(.landing-dark) [class*="rounded-2xl"] {
+  border-radius: 0.75rem !important; /* 12px rounded */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.025) !important;
+  border: 1px solid #e2e8f0 !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+body:not(.landing-dark) .glass-card-hover:hover,
+body:not(.landing-dark) .hover\:scale-\[1\.01\]:hover,
+body:not(.landing-dark) [class*="rounded-xl"]:hover,
+body:not(.landing-dark) [class*="rounded-2xl"]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025) !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Clean border line overrides */
+body:not(.landing-dark) .border,
+body:not(.landing-dark) .border-border,
+body:not(.landing-dark) .border-neutral-900,
+body:not(.landing-dark) .border-neutral-800,
+body:not(.landing-dark) .border-slate-800,
+body:not(.landing-dark) .border-slate-100,
+body:not(.landing-dark) .border-slate-200,
+body:not(.landing-dark) .border-neutral-100,
+body:not(.landing-dark) .border-neutral-200,
+body:not(.landing-dark) .border-neutral-900\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography color overrides */
+body:not(.landing-dark) .text-white,
+body:not(.landing-dark) .text-slate-100,
+body:not(.landing-dark) .text-slate-200,
+body:not(.landing-dark) .text-slate-300,
+body:not(.landing-dark) .text-neutral-900,
+body:not(.landing-dark) .text-slate-900,
+body:not(.landing-dark) .text-slate-905,
+body:not(.landing-dark) .text-neutral-800,
+body:not(.landing-dark) .text-slate-800,
+body:not(.landing-dark) .text-slate-805,
+body:not(.landing-dark) .text-slate-700,
+body:not(.landing-dark) .text-slate-705,
+body:not(.landing-dark) .text-\[\#ffffff\] {
+  color: #0f172a !important;
+}
+
+body:not(.landing-dark) .text-slate-400,
+body:not(.landing-dark) .text-slate-450,
+body:not(.landing-dark) .text-slate-500,
+body:not(.landing-dark) .text-neutral-400,
+body:not(.landing-dark) .text-neutral-450,
+body:not(.landing-dark) .text-neutral-500,
+body:not(.landing-dark) .text-slate-600,
+body:not(.landing-dark) .text-slate-650 {
+  color: #475569 !important;
+}
+
+/* Primary buttons & emerald button overrides */
+body:not(.landing-dark) .bg-emerald-600,
+body:not(.landing-dark) .bg-emerald-650,
+body:not(.landing-dark) .bg-emerald-700,
+body:not(.landing-dark) .bg-primary,
+body:not(.landing-dark) .btn-primary {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border-color: rgba(37, 99, 235, 0.15) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0.5rem !important;
+}
+
+body:not(.landing-dark) .bg-emerald-600:hover,
+body:not(.landing-dark) .bg-emerald-650:hover,
+body:not(.landing-dark) .bg-emerald-700:hover,
+body:not(.landing-dark) .bg-primary:hover,
+body:not(.landing-dark) .btn-primary:hover,
+body:not(.landing-dark) .hover\:bg-emerald-700:hover,
+body:not(.landing-dark) .hover\:bg-emerald-800:hover {
+  background-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+/* Soft light blue backgrounds for indicators */
+body:not(.landing-dark) .bg-emerald-50,
+body:not(.landing-dark) .bg-emerald-50\/10,
+body:not(.landing-dark) .bg-emerald-500\/10,
+body:not(.landing-dark) .bg-primary\/10 {
+  background-color: #dbeafe !important;
+  color: #2563eb !important;
+  border-color: rgba(37, 99, 235, 0.15) !important;
+}
+
+body:not(.landing-dark) .text-emerald-400,
+body:not(.landing-dark) .text-emerald-500,
+body:not(.landing-dark) .text-emerald-600,
+body:not(.landing-dark) .text-emerald-700,
+body:not(.landing-dark) .text-emerald-800 {
+  color: #2563eb !important;
+}
+
+/* Modern clean inputs overrides */
+body:not(.landing-dark) input[type="text"],
+body:not(.landing-dark) input[type="search"],
+body:not(.landing-dark) input[type="email"],
+body:not(.landing-dark) input[type="password"],
+body:not(.landing-dark) textarea,
+body:not(.landing-dark) select,
+body:not(.landing-dark) .input-premium {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  border-radius: 0.75rem !important; /* 12px rounded */
+  padding: 0.625rem 1rem !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+body:not(.landing-dark) input:focus,
+body:not(.landing-dark) textarea:focus,
+body:not(.landing-dark) select:focus,
+body:not(.landing-dark) .input-premium:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+  outline: none !important;
+}
+
+/* Sidebar Custom Rebranding Override */
+body:not(.landing-dark) aside.bg-\[\#050505\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025) !important;
+}
+
+aside .border-neutral-900\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+aside .text-white {
+  color: #0f172a !important;
+}
+
+/* Sidebar navigation links hover & active */
+aside nav a {
+  color: #475569 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+aside nav a.bg-emerald-500\/10 {
+  background-color: #dbeafe !important;
+  color: #2563eb !important;
+  border-color: rgba(37, 99, 235, 0.15) !important;
+  font-weight: 700 !important;
+}
+
+aside nav a.bg-emerald-500\/10 svg {
+  color: #2563eb !important;
+}
+
+aside nav a.text-neutral-400:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+aside nav a.text-neutral-400:hover svg {
+  color: #0f172a !important;
+}
+
+/* Top bar header override */
+header.bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Badges rounded overrides */
+.badge,
+[class*="badge-"] {
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  padding: 0.25rem 0.75rem !important;
+}
+
+/* Custom Thin Scrollbar */
+::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 9999px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb !important;
+}
+

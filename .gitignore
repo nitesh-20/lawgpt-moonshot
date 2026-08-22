@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+frontend-app/node_modules/
+.pnpm-store/
+
+# Production Build Output
+dist/
+dist-ssr/
+frontend-app/dist/
+frontend-app/dist-ssr/
+*.local
+
+# Python Environments & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+backend/venv/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+frontend-app/.env
+frontend-app/.env.*
+!frontend-app/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.env
+
+# Vercel & Deployment
+.vercel/
+frontend-app/.vercel/
+
+# Credentials & Service Accounts
+*.pem
+*.key
+*.json.key
+serviceAccountKey.json
+backend/serviceAccountKey.json
+backend/app/serviceAccountKey.json
+
+# IDEs & System Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tooling Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.eslintcache
+
+# Logs & Temporary Files
+logs/
+backend/logs/
+uploads/
+backend/uploads/
+generated/
+backend/generated/
+temp/
+backend/temp/

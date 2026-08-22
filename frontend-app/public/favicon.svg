@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="8" fill="#0A0D14" />
+  <!-- Scales of Justice Symbol in Emerald / Modern Legal Tech Style -->
+  <path d="M16 5V26" stroke="#10B981" stroke-width="2" stroke-linecap="round" />
+  <path d="M9 9H23" stroke="#10B981" stroke-width="2" stroke-linecap="round" />
+  <path d="M12 26H20" stroke="#10B981" stroke-width="2" stroke-linecap="round" />
+  <!-- Left Pan -->
+  <path d="M9 9L6 16H12L9 9Z" fill="#10B981" fill-opacity="0.2" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M5 16C5 18.2 6.8 20 9 20C11.2 20 13 18.2 13 16H5Z" fill="#10B981" />
+  <!-- Right Pan -->
+  <path d="M23 9L20 16H26L23 9Z" fill="#10B981" fill-opacity="0.2" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M19 16C19 18.2 20.8 20 23 20C25.2 20 27 18.2 27 16H19Z" fill="#10B981" />
+</svg>

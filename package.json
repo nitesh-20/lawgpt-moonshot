@@ -1,0 +1,12 @@
+{
+  "name": "lawgpt-moonshot",
+  "version": "1.0.0",
+  "description": "LawGPT AI OS - Autonomous Multi-Agent Legal Operating System for Moonshot",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend-app && npm run dev",
+    "build": "cd frontend-app && npm run build",
+    "preview": "cd frontend-app && npm run preview",
+    "lint": "cd frontend-app && npm run lint"
+  }
+}

@@ -1,0 +1,41 @@
+GET /api/v1/ - Root
+GET /api/v1/health - Health
+GET /api/v1/ready - Ready
+GET /api/v1/live - Live
+GET /api/v1/version - Version
+GET /api/v1/agents - Get Agents
+POST /api/v1/chat - Chat Endpoint
+POST /api/v1/document/analyze - Analyze Document
+POST /api/v1/document/compare - Compare Documents
+POST /api/v1/document/summarize - Summarize Document
+GET /api/v1/document/status - Get Document Status
+POST /api/v1/upload - Upload Endpoint
+POST /api/v1/research/query - Query Research
+GET /api/v1/research/history - Get History
+GET /api/v1/research/statistics - Get Statistics
+POST /api/v1/research - Research Endpoint
+POST /api/v1/compliance - Compliance Placeholder
+POST /api/v1/compliance/check - Check Compliance
+POST /api/v1/compliance/report - Generate Compliance Report
+GET /api/v1/compliance/history - List Compliance History
+GET /api/v1/compliance/statistics - Get Compliance Statistics
+POST /api/v1/drafting/generate - Generate Draft
+POST /api/v1/drafting/review - Review Draft
+POST /api/v1/drafting/redline - Redline Draft
+POST /api/v1/drafting/improve - Improve Draft
+GET /api/v1/drafting/templates - List Templates
+POST /api/v1/voice/chat - Chat Voice
+POST /api/v1/voice/transcribe - Transcribe Voice
+POST /api/v1/voice/synthesize - Synthesize Voice
+GET /api/v1/voice/session/{session_id} - Get Session History
+GET /api/v1/voice/status - Get Status
+POST /api/v1/knowledge/ingest - Trigger Ingest
+POST /api/v1/knowledge/reindex - Trigger Reindex
+GET /api/v1/knowledge/status - Get Status
+GET /api/v1/knowledge/statistics - Get Statistics
+GET /api/v1/knowledge/documents - Get Documents
+POST /api/v1/orchestrator/chat - Orchestrator Chat
+POST /api/v1/orchestrator/plan - Orchestrator Plan
+GET /api/v1/orchestrator/status - Get Status
+GET /api/v1/orchestrator/agents - List Agents
+GET /api/v1/orchestrator/metrics - Get Metrics
