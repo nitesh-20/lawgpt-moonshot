@@ -102,6 +102,8 @@ export async function summarizeDocument(documentId: string): Promise<string> {
 
 export async function compareDocuments(docId1: string, docId2: string): Promise<any> {
   const formData = new FormData();
+  formData.append("document_id_1", docId1);
+  formData.append("document_id_2", docId2);
   formData.append("doc_id_1", docId1);
   formData.append("doc_id_2", docId2);
   const response = await apiClient.postMultipart("/document/compare", formData);

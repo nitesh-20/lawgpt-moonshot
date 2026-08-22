@@ -147,57 +147,40 @@ async def compare_documents(
     Detects inserted, deleted, and modified clauses, overall legal impact, and risk shifts.
     """
     try:
-        bytes1, bytes2 = b"", b""
-        name1, name2 = "", ""
+        # Helper to resolve document bytes and name
+        async def _resolve_doc(file_obj, path_val, doc_id_val, default_label):
+            if file_obj is not None:
+                content = await file_obj.read()
+                return content, get_safe_filename(file_obj)
+            if path_val and os.path.exists(path_val):
+                with open(path_val, "rb") as f:
+                    return f.read(), os.path.basename(path_val)
+            if doc_id_val:
+                local_docs = {d["id"]: d for d in _get_local_documents()}
+                if doc_id_val in local_docs:
+                    d_meta = local_docs[doc_id_val]
+                    d_name = d_meta.get("title", f"doc_{doc_id_val}.txt")
+                    if d_meta.get("file_path") and os.path.exists(d_meta["file_path"]):
+                        with open(d_meta["file_path"], "rb") as f:
+                            return f.read(), d_name
+                    # Try text content from results
+                    res = d_meta.get("results", {})
+                    exec_summary = res.get("executive_summary", "")
+                    key_findings = "\n".join(res.get("key_findings", []))
+                    clauses_text = "\n".join([c.get("clause_text", "") for c in res.get("clause_breakdown", [])])
+                    synthetic_text = f"{d_name}\n\nSummary:\n{exec_summary}\n\nKey Provisions:\n{key_findings}\n\nClauses:\n{clauses_text}"
+                    return synthetic_text.encode("utf-8"), d_name
+                from app.services.pdf.validator import ValidationService
+                val = ValidationService()
+                val_res = await val.validate_document(doc_id_val)
+                if val_res.get("valid") and val_res.get("absolute_path"):
+                    abs_p = val_res["absolute_path"]
+                    with open(abs_p, "rb") as f:
+                        return f.read(), os.path.basename(str(abs_p))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{default_label} must be specified.")
 
-        # 1. Resolve Doc 1
-        if file1 is not None:
-            bytes1 = await file1.read()
-            name1 = get_safe_filename(file1)
-        elif file_path_1 is not None:
-            if not os.path.exists(file_path_1):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File 1 not found: {file_path_1}")
-            with open(file_path_1, "rb") as f:
-                bytes1 = f.read()
-            name1 = os.path.basename(file_path_1)
-        elif document_id_1 is not None:
-            # Fallback to local manifest or files
-            from app.services.pdf.validator import ValidationService
-            val = ValidationService()
-            val_res = await val.validate_document(document_id_1)
-            if val_res["valid"]:
-                abs_path = val_res["absolute_path"]
-                with open(abs_path, "rb") as f:
-                    bytes1 = f.read()
-                name1 = os.path.basename(str(abs_path))
-            else:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Doc 1 failed validation: {val_res['reason']}")
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document 1 (original) must be specified.")
-
-        # 2. Resolve Doc 2
-        if file2 is not None:
-            bytes2 = await file2.read()
-            name2 = get_safe_filename(file2)
-        elif file_path_2 is not None:
-            if not os.path.exists(file_path_2):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File 2 not found: {file_path_2}")
-            with open(file_path_2, "rb") as f:
-                bytes2 = f.read()
-            name2 = os.path.basename(file_path_2)
-        elif document_id_2 is not None:
-            from app.services.pdf.validator import ValidationService
-            val = ValidationService()
-            val_res = await val.validate_document(document_id_2)
-            if val_res["valid"]:
-                abs_path = val_res["absolute_path"]
-                with open(abs_path, "rb") as f:
-                    bytes2 = f.read()
-                name2 = os.path.basename(str(abs_path))
-            else:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Doc 2 failed validation: {val_res['reason']}")
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document 2 (modified) must be specified.")
+        bytes1, name1 = await _resolve_doc(file1, file_path_1, document_id_1, "Document 1 (Original)")
+        bytes2, name2 = await _resolve_doc(file2, file_path_2, document_id_2, "Document 2 (Updated)")
 
         comparison_results = await analyzer.compare_documents(name1, bytes1, name2, bytes2)
         return {
@@ -314,6 +297,36 @@ def get_documents_collection():
         logger.warning(f"Firestore not available: {e}")
         return None
 
+def _delete_local_document(doc_id: str) -> bool:
+    if _DOCUMENTS_MANIFEST_PATH.exists():
+        try:
+            with open(_DOCUMENTS_MANIFEST_PATH, "r") as f:
+                data = json.load(f)
+            if doc_id in data:
+                del data[doc_id]
+                with open(_DOCUMENTS_MANIFEST_PATH, "w") as f:
+                    json.dump(data, f, indent=2)
+                return True
+        except Exception as e:
+            logger.error(f"Failed to delete local document {doc_id}: {e}")
+    return False
+
+
+def _rename_local_document(doc_id: str, new_title: str) -> dict[str, Any] | None:
+    if _DOCUMENTS_MANIFEST_PATH.exists():
+        try:
+            with open(_DOCUMENTS_MANIFEST_PATH, "r") as f:
+                data = json.load(f)
+            if doc_id in data:
+                data[doc_id]["title"] = new_title
+                with open(_DOCUMENTS_MANIFEST_PATH, "w") as f:
+                    json.dump(data, f, indent=2)
+                return data[doc_id]
+        except Exception as e:
+            logger.error(f"Failed to rename local document {doc_id}: {e}")
+    return None
+
+
 @router.get("/documents", status_code=status.HTTP_200_OK)
 async def list_documents():
     """List all uploaded documents."""
@@ -326,6 +339,33 @@ async def list_documents():
             logger.warning(f"Firestore document list failed: {e}. Falling back to local manifest.")
     return _get_local_documents()
 
+
+@router.delete("/documents/{doc_id}", status_code=status.HTTP_200_OK)
+async def delete_document(doc_id: str):
+    """Delete a document by ID."""
+    docs_ref = get_documents_collection()
+    if docs_ref:
+        try:
+            docs_ref.document(doc_id).delete()
+        except Exception as e:
+            logger.warning(f"Firestore delete failed: {e}")
+    success = _delete_local_document(doc_id)
+    return {"status": "success", "message": f"Document {doc_id} deleted."}
+
+
+class RenameRequest(BaseModel):
+    title: str
+
+
+@router.patch("/documents/{doc_id}", status_code=status.HTTP_200_OK)
+async def rename_document(doc_id: str, req: RenameRequest):
+    """Rename a document title."""
+    updated = _rename_local_document(doc_id, req.title)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    return {"status": "success", "data": updated}
+
+
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_endpoint(file: UploadFile = File(...)):
     """Uploads, analyzes, chunks, and indexes a legal document into the vector store."""
@@ -334,17 +374,25 @@ async def upload_endpoint(file: UploadFile = File(...)):
         file_name = get_safe_filename(file)
         doc_id = str(uuid.uuid4())
         
+        # Save file to disk in data/uploads for comparison & persistent extraction
+        upload_dir = settings.BASE_DIR / "data" / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        saved_file_path = upload_dir / f"{doc_id}_{file_name}"
+        with open(saved_file_path, "wb") as f:
+            f.write(file_bytes)
+
         # This function parses structural text, chunks, embeds in vector DB, and analyzes clauses
-        results = await analyzer.analyze_document(file_name, file_bytes, document_id=doc_id)
+        results = await analyzer.analyze_document(file_name, file_bytes, document_id=doc_id, file_path=str(saved_file_path))
         
         now = datetime.utcnow().isoformat() + "Z"
         doc_metadata = {
             "id": doc_id,
             "title": file_name,
-            "type": file.content_type or "Unknown",
+            "type": file.content_type or "application/pdf" if file_name.endswith(".pdf") else "text/plain",
             "lastModified": now,
-            "size": f"{len(file_bytes) / 1024:.1f} KB",
+            "size": f"{len(file_bytes) / 1024:.1f} KB" if len(file_bytes) < 1024 * 1024 else f"{len(file_bytes) / (1024 * 1024):.1f} MB",
             "category": "uploaded",
+            "file_path": str(saved_file_path),
             "tags": ["Analysis Complete"],
             "results": results
         }
@@ -365,6 +413,7 @@ async def upload_endpoint(file: UploadFile = File(...)):
             "data": doc_metadata
         }
     except Exception as e:
+        logger.exception(f"Document upload error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Document upload failed: {e}"
