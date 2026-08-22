@@ -8,6 +8,7 @@ import {
   Download,
   Trash2,
   Volume2,
+  VolumeX,
   ArrowUpRight,
   Mic,
   RotateCcw
@@ -27,6 +28,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [enableTTS, setEnableTTS] = useState(true);
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,15 +38,15 @@ const Chatbot = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming]);
 
-  // Fast, deterministic conversational Voice Assistant
+  // Real conversational Voice Assistant (No dummy/canned answers)
   const handsFreeVoice = useHandsFreeVoiceChat({
+    enableTTS,
     getDocumentContext: () => {
       return documents.length > 0
         ? documents.map(doc => `Document "${doc.name}":\n${doc.content}`).join('\n\n')
         : '';
     },
     onResult: (result) => {
-      // IMMEDIATELY render into chat conversation
       setMessages((prev) => [
         ...prev,
         { id: crypto.randomUUID(), content: result.transcript || "", sender: "user", timestamp: new Date() },
@@ -55,14 +57,14 @@ const Chatbot = () => {
           timestamp: new Date(),
           citations: (result.citations || []).map((cit: any, idx: number) => ({
             id: cit.id || cit.citation_id || `cit-${idx}`,
-            label: cit.label || cit.document_name || cit.document_id || "Legal Authority",
-            source: cit.source || cit.text || "Contractual / statutory reference"
+            label: cit.label || cit.document_name || cit.document_id || "Citation",
+            source: cit.source || cit.text || "Legal reference"
           }))
         }
       ]);
     },
     onError: (msg) => {
-      toast({ title: "Voice Assistant", description: msg, variant: "destructive" });
+      toast({ title: "Voice Notice", description: msg, variant: "destructive" });
     }
   });
 
@@ -194,18 +196,33 @@ const Chatbot = () => {
           </p>
         </div>
 
-        {messages.length > 0 && (
-          <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
-            <Button onClick={handleExportHistory} variant="outline" className="h-8 border-neutral-200">
-              <Download className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
-              Export
-            </Button>
-            <Button onClick={handleClearHistory} variant="outline" className="h-8 border-neutral-200 text-red-650 hover:bg-red-50 hover:border-red-200">
-              <Trash2 className="mr-1.5 h-3.5 w-3.5 text-red-400" />
-              Clear
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
+          <Button
+            onClick={() => setEnableTTS(!enableTTS)}
+            variant="outline"
+            className={cn(
+              "h-8 border-neutral-200 text-xs font-sans capitalize",
+              enableTTS ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "text-slate-500"
+            )}
+            title={enableTTS ? "Voice output enabled" : "Voice output disabled"}
+          >
+            {enableTTS ? <Volume2 className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> : <VolumeX className="mr-1.5 h-3.5 w-3.5 text-slate-400" />}
+            Audio Voice: {enableTTS ? "ON" : "OFF"}
+          </Button>
+
+          {messages.length > 0 && (
+            <>
+              <Button onClick={handleExportHistory} variant="outline" className="h-8 border-neutral-200">
+                <Download className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                Export
+              </Button>
+              <Button onClick={handleClearHistory} variant="outline" className="h-8 border-neutral-200 text-red-650 hover:bg-red-50 hover:border-red-200">
+                <Trash2 className="mr-1.5 h-3.5 w-3.5 text-red-400" />
+                Clear
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Main Grid: Chat Thread on left, Context panel on right */}
@@ -229,7 +246,7 @@ const Chatbot = () => {
                 <div className="space-y-2">
                   <h3 className="font-sans font-extrabold text-lg text-slate-900 tracking-tight">Consult Voice Assistant</h3>
                   <p className="text-xs text-slate-500 leading-relaxed font-serif">
-                    Tap the microphone icon to speak your question, or type below. Attach reference agreements to analyze liability clauses, verify bounds, or draft provisions.
+                    Tap the microphone icon to speak your legal question, or type below. Attach reference agreements to analyze liability clauses, verify bounds, or draft provisions.
                   </p>
                 </div>
 
@@ -407,7 +424,7 @@ const Chatbot = () => {
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block font-bold">System Briefing Instructions</span>
             <ul className="text-[11px] text-slate-500 space-y-2 list-disc pl-4 font-serif leading-relaxed">
               <li>Attached TXT/PDF files will be mapped into prompt window context.</li>
-              <li>Toggle text-to-speech audio flags to parse answers out loud.</li>
+              <li>Toggle audio voice switch to listen to spoken answers.</li>
               <li>Press escape or use ⌘K shortcut command to launch general command console.</li>
             </ul>
           </div>
@@ -416,7 +433,7 @@ const Chatbot = () => {
       </div>
 
       {/* ===================================================================== */}
-      {/* CLEAN, FAST, DEMO-GRADE VOICE ASSISTANT MODAL */}
+      {/* REAL VOICE ASSISTANT MODAL (NO DUMMY DATA) */}
       {/* ===================================================================== */}
       <AnimatePresence>
         {handsFreeVoice.isOpen && (
@@ -466,16 +483,16 @@ const Chatbot = () => {
                 </div>
               )}
 
-              {/* STATE 2: PROCESSING */}
-              {handsFreeVoice.phase === "processing" && (
+              {/* STATE 2: THINKING */}
+              {handsFreeVoice.phase === "thinking" && (
                 <div className="space-y-4">
                   <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto">
                     <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
                   </div>
 
                   <div className="space-y-0.5">
-                    <h3 className="text-sm font-bold text-slate-900 font-sans">Got it...</h3>
-                    <p className="text-xs text-slate-500">Preparing your answer...</p>
+                    <h3 className="text-sm font-bold text-slate-900 font-sans">Thinking...</h3>
+                    <p className="text-xs text-slate-500">Finding the best answer...</p>
                   </div>
 
                   <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs font-serif text-slate-800">
@@ -495,7 +512,7 @@ const Chatbot = () => {
                 </div>
               )}
 
-              {/* STATE 3: SPEAKING / COMPLETE */}
+              {/* STATE 3: SPEAKING (ONLY WHILE ACTUALLY SPEAKING REAL ANSWER) */}
               {handsFreeVoice.phase === "speaking" && (
                 <div className="space-y-4">
                   <div className="w-14 h-14 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto">
@@ -504,27 +521,19 @@ const Chatbot = () => {
 
                   <div className="space-y-0.5">
                     <h3 className="text-sm font-bold text-slate-900 font-sans">Speaking...</h3>
-                    <p className="text-xs text-slate-500">Answer delivered in chat</p>
+                    <p className="text-xs text-slate-500">Reading real answer aloud</p>
                   </div>
 
                   <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs font-serif text-slate-800 max-h-[100px] overflow-y-auto leading-relaxed text-left">
                     {handsFreeVoice.currentAiResponse}
                   </div>
 
-                  <div className="flex justify-center gap-2 pt-1">
-                    <Button
-                      onClick={handsFreeVoice.start}
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs h-8 px-4 font-semibold cursor-pointer"
-                    >
-                      <Mic className="h-3 w-3 mr-1" />
-                      Ask Next Question
-                    </Button>
+                  <div className="flex justify-center pt-1">
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
                       size="sm"
-                      className="rounded-lg text-xs h-8 px-3 border-slate-200 text-slate-600 cursor-pointer"
+                      className="rounded-lg text-xs h-8 px-4 border-slate-200 text-slate-600 cursor-pointer"
                     >
                       Close
                     </Button>
@@ -532,49 +541,12 @@ const Chatbot = () => {
                 </div>
               )}
 
-              {/* STATE 4: IDLE (READY / COMPLETE) */}
-              {handsFreeVoice.phase === "idle" && (
-                <div className="space-y-4">
-                  <button
-                    type="button"
-                    onClick={handsFreeVoice.start}
-                    className="w-14 h-14 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center mx-auto cursor-pointer transition-all shadow-xs"
-                  >
-                    <Mic className="h-6 w-6 text-emerald-600" />
-                  </button>
-
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm font-bold text-slate-900 font-sans">Ready</h3>
-                    <p className="text-xs text-slate-500">Tap to ask your next legal question</p>
-                  </div>
-
-                  <div className="flex justify-center gap-2 pt-1">
-                    <Button
-                      onClick={handsFreeVoice.start}
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs h-8 px-4 font-semibold cursor-pointer"
-                    >
-                      <Mic className="h-3 w-3 mr-1" />
-                      Tap to Speak
-                    </Button>
-                    <Button
-                      onClick={handsFreeVoice.exit}
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg text-xs h-8 px-3 border-slate-200 text-slate-600 cursor-pointer"
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* STATE 5: ERROR / FALLBACK NOTIFICATION */}
+              {/* STATE 4: ERROR / NO SPEECH DETECTED */}
               {handsFreeVoice.phase === "error" && (
                 <div className="space-y-4">
                   <div className="space-y-0.5">
                     <h3 className="text-sm font-bold text-slate-900 font-sans">Voice Assistant</h3>
-                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Tap to speak again."}</p>
+                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Didn't catch that. Please try again."}</p>
                   </div>
 
                   <div className="flex justify-center gap-2 pt-1">
