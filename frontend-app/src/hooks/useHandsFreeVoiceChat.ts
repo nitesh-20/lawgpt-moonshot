@@ -101,7 +101,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     setCurrentAiResponse("");
   }, [clearAllTimers, stopPlayback, stopRecognition]);
 
-  // Execute REAL backend AI request
+  // Execute REAL backend AI request with the user's spoken words
   const submitRealTranscript = useCallback(async (transcriptText: string) => {
     const trimmed = transcriptText.trim();
     if (!trimmed) {
@@ -134,19 +134,19 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
       }
 
       if (response && response.status === "success") {
-        const botReply = response.response || response.message || "I have analyzed your request.";
+        const botReply = response.response || response.message || "I have analyzed your legal query.";
         const citations = response.citations || [];
 
         setCurrentAiResponse(botReply);
 
-        // 1. Immediately render into conversation history
+        // 1. Immediately render real question and real response into conversation history
         onResult?.({
           transcript: trimmed,
           response_text: botReply,
           citations
         });
 
-        // 2. Play TTS if enabled
+        // 2. Play audio TTS if enabled
         if (enableTTS && typeof window !== "undefined" && "speechSynthesis" in window) {
           try {
             stopPlayback();
@@ -194,7 +194,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
           setPhase("idle");
         }
       } else {
-        throw new Error(response?.message || "AI backend returned error status");
+        throw new Error(response?.message || "Backend returned error status");
       }
     } catch (err: any) {
       console.error("Voice AI execution error:", err);
@@ -208,7 +208,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     }
   }, [clearAllTimers, enableTTS, getDocumentContext, languageCode, onError, onResult, stopPlayback, stopRecognition]);
 
-  // Start voice listening session
+  // Start voice listening session with continuous listening support
   const start = useCallback(() => {
     stopPlayback();
     stopRecognition();
@@ -224,7 +224,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     setCurrentAiResponse("");
     setPhase("listening");
 
-    // 1. Strict 12-second timeout: If no speech occurs, cancel without fake answer
+    // 15-second total inactivity listening window
     listeningTimeoutRef.current = setTimeout(() => {
       if (activeRef.current && !isProcessingRef.current) {
         stopRecognition();
@@ -235,9 +235,8 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
           submitRealTranscript(transcriptBufferRef.current.trim());
         }
       }
-    }, 12000);
+    }, 15000);
 
-    // 2. SpeechRecognition Engine
     const SpeechRecognitionClass = typeof window !== "undefined"
       ? (window.SpeechRecognition || window.webkitSpeechRecognition)
       : null;
@@ -248,102 +247,90 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
       return;
     }
 
-    try {
-      const recognition = new SpeechRecognitionClass();
-      recognitionRef.current = recognition;
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = languageCode || "en-IN";
-      recognition.maxAlternatives = 1;
+    const initRecognition = () => {
+      try {
+        const recognition = new SpeechRecognitionClass();
+        recognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = languageCode || "en-IN";
+        recognition.maxAlternatives = 1;
 
-      recognition.onstart = () => {
-        if (!activeRef.current || isProcessingRef.current) {
-          try { recognition.abort(); } catch (e) {}
-          return;
-        }
-        setPhase("listening");
-      };
-
-      recognition.onresult = (event: any) => {
-        if (!activeRef.current || isProcessingRef.current) return;
-        let interim = "";
-        let final = "";
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const result = event.results[i];
-          const text = result[0].transcript;
-          if (result.isFinal) {
-            final += text;
-          } else {
-            interim += text;
-          }
-        }
-
-        const currentText = (final || interim).trim();
-        if (currentText) {
-          transcriptBufferRef.current = currentText;
-          setLiveTranscript(currentText);
-
-          // If final transcript is received, submit real question immediately
-          if (final.trim()) {
-            submitRealTranscript(final.trim());
+        recognition.onstart = () => {
+          if (!activeRef.current || isProcessingRef.current) {
+            try { recognition.abort(); } catch (e) {}
             return;
           }
+          setPhase("listening");
+        };
 
-          // Debounce 900ms pause after words are spoken
-          if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
-          silenceDebounceRef.current = setTimeout(() => {
-            if (activeRef.current && !isProcessingRef.current && transcriptBufferRef.current.trim()) {
-              submitRealTranscript(transcriptBufferRef.current.trim());
+        recognition.onresult = (event: any) => {
+          if (!activeRef.current || isProcessingRef.current) return;
+          let interim = "";
+          let final = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const result = event.results[i];
+            const text = result[0].transcript;
+            if (result.isFinal) {
+              final += text;
+            } else {
+              interim += text;
             }
-          }, 900);
-        }
-      };
-
-      recognition.onspeechend = () => {
-        if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
-        const captured = transcriptBufferRef.current.trim();
-        if (captured && !isProcessingRef.current) {
-          submitRealTranscript(captured);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("Speech recognition notice:", event.error);
-        if (event.error === "not-allowed") {
-          setPhase("error");
-          setErrorMessage("Microphone permission was denied. Please allow microphone access in your browser.");
-        } else if (event.error === "no-speech") {
-          if (!transcriptBufferRef.current.trim()) {
-            setPhase("error");
-            setErrorMessage("Didn't catch that. Please try again.");
           }
-        } else if (event.error !== "aborted") {
-          if (!transcriptBufferRef.current.trim()) {
-            setPhase("error");
-            setErrorMessage("Speech capture error. Tap Try Again to speak.");
-          }
-        }
-      };
 
-      recognition.onend = () => {
-        if (activeRef.current && !isProcessingRef.current) {
-          const captured = transcriptBufferRef.current.trim();
-          if (captured) {
-            submitRealTranscript(captured);
-          } else {
-            setPhase("error");
-            setErrorMessage("Didn't catch that. Please try again.");
-          }
-        }
-      };
+          const currentText = (final || interim).trim();
+          if (currentText) {
+            transcriptBufferRef.current = currentText;
+            setLiveTranscript(currentText);
 
-      recognition.start();
-    } catch (err: any) {
-      console.warn("Speech recognition initialization error:", err);
-      setPhase("error");
-      setErrorMessage("Could not initialize microphone. Please check permissions.");
-    }
+            // Debounce 1.2s silence after user starts speaking to auto-submit
+            if (silenceDebounceRef.current) clearTimeout(silenceDebounceRef.current);
+            silenceDebounceRef.current = setTimeout(() => {
+              if (activeRef.current && !isProcessingRef.current && transcriptBufferRef.current.trim()) {
+                submitRealTranscript(transcriptBufferRef.current.trim());
+              }
+            }, 1200);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("Speech recognition event notice:", event.error);
+          if (event.error === "not-allowed") {
+            setPhase("error");
+            setErrorMessage("Microphone permission was denied. Please allow microphone access in your browser.");
+          } else if (event.error === "no-speech") {
+            // Chrome fires no-speech when silent; DO NOT fail, just keep listening
+            console.log("No speech in this interval, continuing to listen...");
+          }
+        };
+
+        recognition.onend = () => {
+          // If recognition ends prematurely but user is still in active listening window
+          if (activeRef.current && !isProcessingRef.current) {
+            const captured = transcriptBufferRef.current.trim();
+            if (captured) {
+              submitRealTranscript(captured);
+            } else {
+              // Seamlessly restart recognition so user has full 15s to speak
+              try {
+                recognition.start();
+              } catch (e) {
+                // Ignore restart collision
+              }
+            }
+          }
+        };
+
+        recognition.start();
+      } catch (err: any) {
+        console.warn("Speech recognition start exception:", err);
+        setPhase("error");
+        setErrorMessage("Could not initialize microphone. Please check permissions.");
+      }
+    };
+
+    initRecognition();
   }, [clearAllTimers, languageCode, stopPlayback, stopRecognition, submitRealTranscript]);
 
   // Clean up on unmount
@@ -366,6 +353,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     isActive: isOpen,
     start,
     exit,
-    stopPlayback
+    stopPlayback,
+    submitRealTranscript
   };
 }

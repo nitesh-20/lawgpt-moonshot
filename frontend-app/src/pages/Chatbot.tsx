@@ -470,7 +470,16 @@ const Chatbot = () => {
                     )}
                   </div>
 
-                  <div className="flex justify-center pt-1">
+                  <div className="flex justify-center gap-2 pt-1">
+                    {handsFreeVoice.liveTranscript && (
+                      <Button
+                        onClick={() => handsFreeVoice.submitRealTranscript(handsFreeVoice.liveTranscript)}
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs h-8 px-4 font-semibold cursor-pointer"
+                      >
+                        Done Speaking
+                      </Button>
+                    )}
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
