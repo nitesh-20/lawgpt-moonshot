@@ -1,187 +1,188 @@
-# LawGPT AI OS ⚖️🤖
+# LawGPT Moonshot
 
-> **MOONSHOT Buildathon Submission** — An autonomous, multi-agent AI Operating System for legal intelligence, document understanding, compliance verification, and multilingual voice interaction.
+An AI-powered legal assistant that helps users understand, research, analyze, and work with legal information through clear, accessible AI-powered interactions.
 
 ---
 
-## 🏛️ System Architecture
+## Overview
 
-LawGPT AI OS is built as a decoupled, modern legal engineering platform:
+Legal information is often dense, statutory, and difficult for non-lawyers and businesses to interpret quickly. Finding relevant provisions, verifying citations, and extracting actionable obligations typically requires navigating through hundreds of pages of gazetted acts and legal documents.
+
+**LawGPT Moonshot** bridges this gap by providing an intelligent legal operating system. It translates complex statutory frameworks, bare acts, and contracts into clear, structured, and easy-to-understand explanations—backed by exact legal provisions, verified document citations, and actionable risk assessments.
+
+> **Disclaimer**: LawGPT Moonshot is designed for general legal understanding, research, and productivity assistance. It is not a substitute for formal legal representation or professional legal advice.
+
+---
+
+## Key Features
+
+### 1. 🔍 AI Legal Search & Conversational Q&A
+- **Direct Answers First**: Gives an immediate, plain-language answer to user queries (e.g., freedom of speech, data protection rules, employee termination rights) without raw text dumps.
+- **Structured Legal Basis**: Explicitly lists governing Articles, Acts, and Sections (e.g., *Article 19(1)(a) read with Article 19(2), Constitution of India*).
+- **Verified Sources & Metadata**: Displays exact document names, PDF file references, page numbers, years, and chapter provisions.
+- **Why This Source Matters**: Provides a concise rationale explaining why the cited authority governs the specific question.
+- **Important Notes & Caveats**: Highlights statutory restrictions, exceptions, and procedural boundaries.
+- **In Simple Legal Terms**: Concludes with a short takeaway blockquote for instant comprehension.
+
+### 2. 📑 Document Intelligence & Analysis
+- **Contract & Document Upload**: Upload legal agreements, petitions, and notices in PDF format.
+- **Clause Extraction & Risk Scoring**: Automatically extracts key clauses, liabilities, indemnity caps, and termination provisions.
+- **Compliance Summaries**: Highlights high-risk ambiguities and non-standard contract clauses.
+
+### 3. ✍️ AI Document Drafting
+- **Template-Driven Generation**: Generate customized legal documents including Non-Disclosure Agreements (NDAs), Employment Contracts, Legal Notices, and Consultancy Agreements.
+- **Dynamic Variable Injection**: Fill parties, governing law, jurisdiction, and clause terms with live document preview and PDF export.
+
+### 4. 🛡️ Regulatory Compliance Checker
+- **Statutory Risk Auditing**: Evaluate business policies and workflows against major regulatory frameworks such as the **Digital Personal Data Protection Act (DPDP Act, 2023)**, **Companies Act, 2013**, and **Industrial Disputes Act, 1947**.
+- **Remediation Steps**: Generates clear checklists to mitigate exposure to regulatory penalties and litigation.
+
+### 5. 🎙️ Indic Voice Assistant & Multilingual Translation
+- **Hands-Free Voice Interaction**: Query the legal assistant via microphone input powered by speech recognition.
+- **Audio Playback (TTS)**: Listen to legal answers read aloud with natural speech synthesis.
+- **Multilingual Support**: On-demand translation of legal answers into Indian languages including Hindi (HI), Tamil (TA), Telugu (TE), and Bengali (BN).
+
+### 6. ⚖️ Case Management & Litigation Tracking
+- **Case Dashboard**: Organize active legal matters, tracking court jurisdictions, case numbers, hearing dates, and case stages.
+- **Milestone Timelines**: Visual chronological progression of filings, orders, and upcoming court appearances.
+
+---
+
+## How It Works
+
+```
+User Query / Voice Input
+          │
+          ▼
+Legal Intent & Semantic Retrieval
+(Matches Statutes, Bare Acts & Documents)
+          │
+          ▼
+Legal Reasoning Engine
+(Synthesizes Direct Answer + Validates Provisions)
+          │
+          ▼
+Structured Presentation
+├── Plain-Language Answer
+├── Governing Legal Basis (Act / Article / Section)
+├── Verified Source (Document, PDF, Page, Year)
+├── Why This Source Matters
+├── Important Notes & Statutory Caveats
+└── Audio Playback / Multilingual Translation
+```
+
+---
+
+## User Experience
+
+- **Dashboard**: Unified control center displaying active cases, document counts, compliance health, and quick-action shortcuts.
+- **Legal Search**: Conversational ChatGPT-style card layout emphasizing direct answers, structured legal basis, and verified PDF source citations.
+- **Documents**: Central repository for uploaded agreements with clause breakdown and risk indicators.
+- **Document Drafting**: Step-by-step drafting wizard with real-time preview and export capabilities.
+- **Compliance Checker**: Audit interface for evaluating business operations against statutory mandates.
+- **Voice Assistant**: Integrated hands-free audio assistant for spoken legal queries.
+
+---
+
+## Technology Stack
+
+### Frontend
+- **Framework**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Language**: TypeScript
+- **Styling**: Vanilla CSS + Tailwind CSS utilities
+- **UI Components**: Radix UI Primitives, Lucide React Icons
+- **Animations & Smooth Scroll**: Framer Motion, GSAP, Lenis
+- **Notifications**: Sonner
+
+### Backend
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.14 / 3.11+)
+- **Server**: Uvicorn (ASGI)
+- **Data Validation & Settings**: Pydantic v2, Pydantic Settings
+- **Document Processing**: PyPDF, PDFPlumber
+- **HTTP Client**: HTTPX
+
+### AI & Speech Services
+- **Indic Voice & Translation**: [Sarvam AI](https://sarvam.ai/) (Saaras STT, Bulbul TTS, Mayura / Sarvam-Translate)
+- **Language Intelligence & Supplemental Embeddings**: Google Gemini API
+- **Deterministic Legal Reasoner**: Rule-grounded statutory reasoner for consistent, citation-verified outputs
+
+### Deployment & DevOps
+- **Frontend Hosting**: Vercel (Single Page Application configuration via `vercel.json`)
+- **Containerization**: Docker, Docker Compose
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart TD
-    User([User Client]) <-->|React + Vite + Tailwind UI| Frontend[frontend-app]
-    Frontend <-->|REST API / OpenAPI / SSE| Backend[FastAPI Backend]
+    User([User]) -->|Web Browser / Voice| Frontend[React + Vite Frontend]
     
-    subgraph Backend Modules
-        API[API Endpoints /api/v1] <--> Log[Logging & Middleware]
-        API <--> DB[(Firestore / Cloud Storage / Local JSON Cache)]
-        API <--> Orchestrator[Orchestrator Agent]
+    subgraph Frontend_Layer [Frontend Layer]
+        Frontend --> UI_Components[Radix UI + Lucide Icons]
+        Frontend --> Voice_Controls[Audio Playback & Voice Input]
+        Frontend --> API_Client[API Client Services]
     end
-    
-    subgraph Multi-Agent Network
-        Orchestrator <--> DocAgent[Document Intelligence Agent]
-        Orchestrator <--> ResAgent[Legal Research Agent]
-        Orchestrator <--> RiskAgent[Risk Analysis Agent]
-        Orchestrator <--> CompAgent[Compliance Verification Agent]
-        Orchestrator <--> DraftAgent[Contract & Notice Drafting Agent]
-        Orchestrator <--> VoiceAgent[Voice & Multilingual Indic Agent]
-        Orchestrator <--> MemAgent[Conversation Memory Agent]
+
+    API_Client -->|REST / JSON| Backend[FastAPI Backend]
+
+    subgraph Backend_Layer [Backend Services]
+        Backend --> Router[API v1 Endpoints]
+        Router --> ResearchAgent[Legal Research Agent]
+        Router --> DraftingAgent[Document Drafting Agent]
+        Router --> ComplianceAgent[Compliance Engine]
+        Router --> DocumentEngine[Document Intelligence / PDF Parser]
+        
+        ResearchAgent --> LegalReasoner[Legal Reasoner & Citation Engine]
+        ResearchAgent --> DocStore[Legal Document Knowledge Base]
     end
-    
-    subgraph AI & External Integrations
-        DocAgent -->|PyMuPDF / pdfplumber| PDF[Local PDF Parsers]
-        ResAgent -->|LLM / Gemini 2.5| Gemini[Google Gemini AI]
-        VoiceAgent -->|Indic ASR / TTS / Translation| Sarvam[Sarvam AI APIs]
+
+    subgraph External_Services [AI & Speech Services]
+        Backend --> SarvamAI[Sarvam AI Voice & Translation API]
+        Backend --> GeminiAPI[Google Gemini API]
     end
+
+    LegalReasoner -->|Structured Response| Backend
+    Backend -->|JSON Payload| Frontend
+    Frontend -->|Render Answer + Sources + Audio| User
 ```
 
 ---
 
-## 📂 Project Directory Structure
-
-```text
-lawgpt-moonshot/
-├── backend/               # FastAPI Backend Service
-│   ├── app/
-│   │   ├── agents/        # Orchestrator & Specialized Domain Sub-Agents
-│   │   ├── api/           # Versioned API routes (/api/v1)
-│   │   ├── core/          # App configuration, security, exception handling, logging
-│   │   ├── database/      # Firestore & Cloud Storage connection clients (with local JSON fallbacks)
-│   │   ├── services/      # Service integration layers (Gemini, RAG, Sarvam AI, PDF)
-│   │   └── main.py        # Application startup & middleware configuration
-│   ├── data/              # Local data storage, document metadata & vector fallbacks
-│   ├── tests/             # Comprehensive Pytest suite
-│   ├── Dockerfile         # Production container build
-│   └── requirements.txt   # Backend Python dependencies
-├── frontend-app/          # React + Vite + TypeScript + Tailwind CSS Frontend
-│   ├── src/
-│   │   ├── components/    # Reusable UI component library (shadcn/ui inspired)
-│   │   ├── pages/         # Page views (Dashboard, Assistant, Documents, Research, etc.)
-│   │   ├── services/      # Client-side API orchestration & state management
-│   │   └── utils/         # API Client & streaming utilities
-│   └── package.json       # Frontend dependencies & scripts
-├── docs/                  # Architectural documentation & technical specs
-└── docker-compose.yml     # Workspace orchestration file
-```
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Python 3.11+** or **Python 3.12+**
-- **Node.js 18+** / **npm** / **bun**
-- **Docker** and **Docker Compose** (optional)
+- Node.js 18+ and npm / pnpm
+- Python 3.11+
 
----
-
-### 1. Backend Setup
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Copy the environment configuration file:
-   ```bash
-   cp .env.example .env
-   ```
-   *Edit `.env` to configure your API keys (e.g. `GEMINI_API_KEY`, `SARVAM_API_KEY`). The system includes local JSON fallbacks for offline development.*
-
-5. Run development server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-   *The Swagger UI documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs).*
-
----
-
-### 2. Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend-app
-   ```
-2. Install package dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy the environment configuration file:
-   ```bash
-   cp .env.example .env
-   ```
-   *Ensure `VITE_BACKEND_URL=http://127.0.0.1:8000/api/v1` is set.*
-
-4. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   *The web portal will run on [http://localhost:8080](http://localhost:8080) or [http://localhost:5173](http://localhost:5173).*
-
----
-
-### 3. Docker Compose Setup (Full Stack)
-
-Build and run both services together from the root of the workspace:
+### 1. Clone the Repository
 ```bash
-docker compose up --build
+git clone https://github.com/nitesh-20/lawgpt-moonshot.git
+cd lawgpt-moonshot
 ```
 
----
+### 2. Backend Setup
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --port 8000 --reload
+```
 
-## 🛣️ API Endpoints Summary
+### 3. Frontend Setup
+```bash
+cd ../frontend-app
+npm install
+cp .env.example .env
+npm run dev
+```
 
-All routes are versioned under `/api/v1`:
-
-- **System Health**:
-  - `GET /api/v1/health` - Check API and environment configuration.
-  - `GET /api/v1/ready` - Verify database and cloud service connectivity.
-  - `GET /api/v1/live` - Verify engine liveness.
-  - `GET /api/v1/version` - Retrieve application details.
-
-- **Modular Domain Agents**:
-  - `GET /api/v1/agents` - Query registered sub-agent metadata and capabilities.
-  - `POST /api/v1/chat` - Interact with the Orchestrator Chat Agent.
-  - `POST /api/v1/document/analyze` - Upload and analyze legal documents.
-  - `POST /api/v1/document/compare` - Compare two legal agreements.
-  - `POST /api/v1/research/query` - Perform legal query research tasks.
-  - `POST /api/v1/compliance/verify` - Verify regulatory compliance.
-  - `POST /api/v1/draft/generate` - Draft legal letters, notices, and contracts.
-  - `POST /api/v1/voice/transcribe` - Transcribe voice clips or translate text.
-  - `POST /api/v1/knowledge/ingest` - Ingest legal documents into vector storage.
-
-For detailed architecture guides, refer to:
-- [Document Ingestion Guide](docs/document_ingestion.md)
-- [Orchestrator Guide](docs/orchestrator.md)
-- [Voice Agent Integration](docs/voice_agent.md)
-- [Compliance Agent Guide](docs/compliance_agent.md)
+The application will be accessible at `http://localhost:5173` (or `http://localhost:8083`).
 
 ---
 
-## 🛠️ Verification & Quality Assurance
+## License
 
-- **Run Type Checks**:
-  ```bash
-  mypy backend
-  ```
-- **Run Style Linters**:
-  ```bash
-  ruff check backend/app
-  ```
-- **Run Backend Tests**:
-  ```bash
-  pytest backend/tests/
-  ```
-- **Run Frontend Build**:
-  ```bash
-  cd frontend-app && npm run build
-  ```
+This project is licensed under the MIT License.
