@@ -39,6 +39,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const sessionIdRef = useRef<string>("voice_session_" + Date.now());
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptBufferRef = useRef<string>("");
 
   // Stop active speech synthesis
@@ -55,12 +56,17 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
 
   // Stop recognition instance
   const stopRecognition = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onstart = null;
         recognitionRef.current.onresult = null;
         recognitionRef.current.onerror = null;
         recognitionRef.current.onend = null;
+        recognitionRef.current.onspeechend = null;
         recognitionRef.current.abort();
       } catch (e) {
         // Ignore abort errors
@@ -76,6 +82,10 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     if (fallbackTimeoutRef.current) {
       clearTimeout(fallbackTimeoutRef.current);
       fallbackTimeoutRef.current = null;
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
     stopRecognition();
     stopPlayback();
@@ -97,6 +107,11 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
 
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
 
     setPhase("thinking");
     setLiveTranscript(trimmed);
@@ -130,7 +145,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
         return;
       }
 
-      const botReply = response?.response || response?.message || "I have processed your legal query.";
+      const botReply = response?.response || response?.message || "I have analyzed your legal query.";
       const citations = response?.citations || [];
 
       // Add to chat messages
@@ -216,7 +231,6 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Immediately release media stream tracks since SpeechRecognition manages its own stream
         stream.getTracks().forEach(t => t.stop());
       }
     } catch (permErr) {
@@ -265,15 +279,38 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
           }
         }
 
-        const currentText = final || interim;
-        transcriptBufferRef.current = currentText;
-        setLiveTranscript(currentText);
+        const currentText = (final || interim).trim();
+        if (currentText) {
+          transcriptBufferRef.current = currentText;
+          setLiveTranscript(currentText);
+
+          // Automatic speech pause detector: If user stops speaking for 1.1s, auto submit!
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = setTimeout(() => {
+            if (activeRef.current && !isSubmittingRef.current && transcriptBufferRef.current.trim()) {
+              try { recognition.stop(); } catch(e){}
+              submitQuery(transcriptBufferRef.current.trim());
+            }
+          }, 1100);
+        }
+      };
+
+      recognition.onspeechend = () => {
+        // Native speech-end detection: User finished their sentence
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        const captured = transcriptBufferRef.current.trim();
+        if (captured && activeRef.current && !isSubmittingRef.current) {
+          try { recognition.stop(); } catch(e){}
+          submitQuery(captured);
+        }
       };
 
       recognition.onerror = (event: any) => {
         console.warn("Speech recognition event notice:", event.error);
         if (event.error === "no-speech") {
-          // If no speech detected in this round, keep modal open
           setErrorMessage("No speech detected. Tap 'Speak Again' when ready.");
           setPhase("idle");
         } else if (event.error === "not-allowed") {
@@ -286,6 +323,10 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
       };
 
       recognition.onend = () => {
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
         const capturedText = transcriptBufferRef.current.trim();
         if (capturedText && activeRef.current && !isSubmittingRef.current) {
           submitQuery(capturedText);
@@ -304,6 +345,10 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
 
   // Stop listening manually and submit whatever was spoken
   const stopListeningNow = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -323,9 +368,10 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
   useEffect(() => {
     return () => {
       activeRef.current = false;
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
       stopRecognition();
       stopPlayback();
-      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
     };
   }, [stopRecognition, stopPlayback]);
 

@@ -450,7 +450,7 @@ const Chatbot = () => {
 
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-slate-900 font-sans">Listening…</h3>
-                    <p className="text-xs text-slate-500">Speak your legal question clearly</p>
+                    <p className="text-xs text-slate-500">Speak your question — answering automatically when you stop</p>
                   </div>
 
                   {/* Live real-time transcript preview */}
@@ -458,21 +458,15 @@ const Chatbot = () => {
                     {handsFreeVoice.liveTranscript ? (
                       <span>"{handsFreeVoice.liveTranscript}"</span>
                     ) : (
-                      <span className="text-slate-400 italic font-sans">Listening for speech...</span>
+                      <span className="text-slate-400 italic font-sans">Speak your question now...</span>
                     )}
                   </div>
 
                   <div className="flex justify-center gap-3 pt-2">
                     <Button
-                      onClick={handsFreeVoice.stopListeningNow}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold cursor-pointer"
-                    >
-                      Done Speaking
-                    </Button>
-                    <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
-                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
+                      className="rounded-xl text-xs h-9 px-5 border-slate-200 text-slate-600 hover:text-slate-900 cursor-pointer"
                     >
                       Cancel
                     </Button>
