@@ -1,253 +1,333 @@
-import { useRef, useState, useEffect } from "react";
-import { voiceChat, type VoiceChatResult } from "@/services/voice";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { apiClient } from "@/utils/apiClient";
 
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking" | "error";
 
-interface UseHandsFreeVoiceChatOptions {
-  /** Language hint for STT/TTS, e.g. "en-IN". Omit to let the backend auto-detect. */
-  languageCode?: string;
-  /** Milliseconds of silence before a listening turn auto-submits. */
-  silenceMs?: number;
-  onResult?: (result: VoiceChatResult) => void;
-  onError?: (message: string) => void;
+export interface VoiceChatResult {
+  transcript: string;
+  response_text: string;
+  citations?: any[];
 }
 
-/**
- * Drives a full-duplex "ChatGPT voice mode" style loop on top of the /voice/chat
- * endpoint: record -> VAD silence auto-stop -> transcribe+answer+synthesize (backend) ->
- * play response -> resume listening, until exit() is called.
- */
+interface UseHandsFreeVoiceChatOptions {
+  languageCode?: string;
+  onResult?: (result: VoiceChatResult) => void;
+  onError?: (message: string) => void;
+  getDocumentContext?: () => string;
+}
+
+// Window typing for SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}) {
-  const { languageCode, silenceMs = 1500, onResult, onError } = options;
+  const { languageCode = "en-IN", onResult, onError, getDocumentContext } = options;
 
   const [phase, setPhase] = useState<VoicePhase>("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [liveTranscript, setLiveTranscript] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [currentAiResponse, setCurrentAiResponse] = useState<string>("");
 
   const activeRef = useRef(false);
-  // Bumped on every start()/exit() so a slow turn from a previous session (e.g. a
-  // network call still in flight after the user tapped stop-and-restart) can tell
-  // it's stale and bail out instead of playing its audio over a newer, live turn —
-  // this was the "multiple AI voices at once" bug.
-  const generationRef = useRef(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
-  const sessionIdRef = useRef<string>("");
+  const isSubmittingRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const sessionIdRef = useRef<string>("voice_session_" + Date.now());
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptBufferRef = useRef<string>("");
 
-  function cleanupMic() {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    mediaRecorderRef.current = null;
-    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
-      audioCtxRef.current.close();
+  // Stop active speech synthesis
+  const stopPlayback = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
-    audioCtxRef.current = null;
-  }
-
-  function stopPlayback() {
-    if (audioElRef.current) {
-      audioElRef.current.onended = null;
-      audioElRef.current.onerror = null;
-      audioElRef.current.pause();
-      audioElRef.current = null;
+    if (currentUtteranceRef.current) {
+      currentUtteranceRef.current.onend = null;
+      currentUtteranceRef.current.onerror = null;
+      currentUtteranceRef.current = null;
     }
-  }
+  }, []);
 
-  function exit() {
+  // Stop recognition instance
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {
+        // Ignore abort errors
+      }
+      recognitionRef.current = null;
+    }
+  }, []);
+
+  // Exit Voice Mode completely
+  const exit = useCallback(() => {
     activeRef.current = false;
-    generationRef.current += 1;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.onstop = null;
-      mediaRecorderRef.current.stop();
+    isSubmittingRef.current = false;
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
     }
-    cleanupMic();
+    stopRecognition();
     stopPlayback();
     setPhase("idle");
+    setLiveTranscript("");
     setErrorMessage("");
-  }
+    setCurrentAiResponse("");
+  }, [stopRecognition, stopPlayback]);
 
-  /** True if `gen` is still the live session — false means a stale async callback. */
-  function isCurrent(gen: number) {
-    return activeRef.current && generationRef.current === gen;
-  }
+  // Execute AI chat query and then TTS
+  const submitQuery = useCallback(async (queryText: string) => {
+    const trimmed = queryText.trim();
+    if (!trimmed) {
+      setErrorMessage("I didn't catch that. Please speak again.");
+      setPhase("idle");
+      activeRef.current = false;
+      return;
+    }
 
-  async function submitTurn(blob: Blob, gen: number) {
-    if (!isCurrent(gen)) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     setPhase("thinking");
+    setLiveTranscript(trimmed);
+
+    // Timeout safety
+    if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+    fallbackTimeoutRef.current = setTimeout(() => {
+      if (activeRef.current && isSubmittingRef.current) {
+        isSubmittingRef.current = false;
+        setPhase("idle");
+        setErrorMessage("Request took too long. Please try asking again.");
+      }
+    }, 25000);
+
     try {
-      const result = await voiceChat(blob, sessionIdRef.current, languageCode);
-      if (!isCurrent(gen)) return; // a newer/exited session superseded this one while we waited
+      const docContext = getDocumentContext ? getDocumentContext() : "";
+      const fullMessage = trimmed + (docContext ? `\n\nContext:\n${docContext}` : "");
 
-      onResult?.(result);
+      const response = await apiClient.post("/orchestrator/chat", {
+        message: fullMessage,
+        session_id: sessionIdRef.current
+      });
 
-      if (result.response_audio) {
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
+
+      if (!activeRef.current) {
+        isSubmittingRef.current = false;
+        return;
+      }
+
+      const botReply = response?.response || response?.message || "I have analyzed your request.";
+      const citations = response?.citations || [];
+
+      // Add to chat messages
+      onResult?.({
+        transcript: trimmed,
+        response_text: botReply,
+        citations
+      });
+
+      setCurrentAiResponse(botReply);
+
+      // TTS: Speak AI response aloud
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        stopPlayback();
         setPhase("speaking");
-        stopPlayback(); // never let two clips play at once
-        const audio = new Audio(`data:audio/wav;base64,${result.response_audio}`);
-        audioElRef.current = audio;
-        audio.onended = () => {
-          if (audioElRef.current === audio) audioElRef.current = null;
-          if (isCurrent(gen)) listenOnce(gen);
-          else if (!activeRef.current) setPhase("idle");
+
+        // Clean any markdown formatting for natural TTS reading
+        const cleanSpeakText = botReply
+          .replace(/[*_#`~\[\]\(\)]/g, " ")
+          .replace(/\n+/g, ". ")
+          .trim();
+
+        const utterance = new SpeechSynthesisUtterance(cleanSpeakText);
+        utterance.lang = languageCode || "en-IN";
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        currentUtteranceRef.current = utterance;
+
+        utterance.onend = () => {
+          if (currentUtteranceRef.current === utterance) {
+            currentUtteranceRef.current = null;
+          }
+          isSubmittingRef.current = false;
+          if (activeRef.current) {
+            setPhase("idle");
+          }
         };
-        audio.onerror = () => {
-          if (audioElRef.current === audio) audioElRef.current = null;
-          if (isCurrent(gen)) listenOnce(gen);
-          else if (!activeRef.current) setPhase("idle");
+
+        utterance.onerror = (e) => {
+          console.warn("Speech synthesis notice:", e);
+          if (currentUtteranceRef.current === utterance) {
+            currentUtteranceRef.current = null;
+          }
+          isSubmittingRef.current = false;
+          if (activeRef.current) {
+            setPhase("idle");
+          }
         };
-        try {
-          await audio.play();
-        } catch (playErr) {
-          // Browser autoplay policy occasionally blocks play() after a long network
-          // wait — the reply text still made it into the chat via onResult above,
-          // so just move on to the next turn instead of treating this as fatal.
-          console.warn("Voice reply audio could not autoplay:", playErr);
-          if (audioElRef.current === audio) audioElRef.current = null;
-          if (isCurrent(gen)) listenOnce(gen);
-        }
-      } else if (isCurrent(gen)) {
-        listenOnce(gen);
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        isSubmittingRef.current = false;
+        setPhase("idle");
       }
     } catch (err: any) {
-      if (!isCurrent(gen)) return;
-      const msg = err?.message || "Voice turn failed";
-      setPhase("error");
-      setErrorMessage(msg);
-      onError?.(msg);
-      setTimeout(() => { if (isCurrent(gen)) exit(); }, 2000);
-    }
-  }
+      console.error("Voice chat error:", err);
+      isSubmittingRef.current = false;
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
 
-  async function listenOnce(gen: number) {
-    if (!isCurrent(gen)) return;
-    setPhase("listening");
-
-    let stream: MediaStream;
-    try {
-      // autoGainControl off: Chrome's default AGC amplifies quiet room noise to a
-      // steady target volume, which was keeping the VAD's silence check permanently
-      // above threshold and forcing users to hit "tap to stop" manually every time.
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false }
-      });
-    } catch {
-      const msg = "Microphone access denied";
-      if (isCurrent(gen)) {
+      if (activeRef.current) {
         setPhase("error");
+        const msg = err?.message || "Failed to get AI answer. Please try again.";
         setErrorMessage(msg);
         onError?.(msg);
-        setTimeout(() => { if (isCurrent(gen)) exit(); }, 2000);
+        setTimeout(() => {
+          if (activeRef.current) setPhase("idle");
+        }, 3000);
       }
+    }
+  }, [getDocumentContext, languageCode, onResult, onError, stopPlayback]);
+
+  // Start listening session
+  const start = useCallback(() => {
+    stopPlayback();
+    stopRecognition();
+
+    activeRef.current = true;
+    isSubmittingRef.current = false;
+    transcriptBufferRef.current = "";
+    setLiveTranscript("");
+    setErrorMessage("");
+    setCurrentAiResponse("");
+    setPhase("listening");
+
+    const SpeechRecognitionClass = typeof window !== "undefined" 
+      ? (window.SpeechRecognition || window.webkitSpeechRecognition) 
+      : null;
+
+    if (!SpeechRecognitionClass) {
+      setPhase("error");
+      setErrorMessage("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return;
     }
 
-    if (!isCurrent(gen)) {
-      stream.getTracks().forEach((t) => t.stop());
-      return;
-    }
-    streamRef.current = stream;
-
-    const recorder = new MediaRecorder(stream);
-    const chunks: Blob[] = [];
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    recorder.onstop = () => {
-      stream.getTracks().forEach((t) => t.stop());
-      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
-        audioCtxRef.current.close();
-      }
-      if (!isCurrent(gen)) return;
-      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-      if (blob.size > 0) {
-        submitTurn(blob, gen);
-      } else {
-        listenOnce(gen);
-      }
-    };
-
-    recorder.start();
-
-    // Web Audio VAD: auto-stop the turn after a period of silence.
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioCtxRef.current = audioContext;
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
+      const recognition = new SpeechRecognitionClass();
+      recognitionRef.current = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = languageCode || "en-IN";
+      recognition.maxAlternatives = 1;
 
-      const buffer = new Uint8Array(analyser.frequencyBinCount);
-      let lastSpeechTime = Date.now();
-
-      const checkSilence = () => {
-        if (!isCurrent(gen) || recorder.state !== "recording") return;
-
-        analyser.getByteFrequencyData(buffer);
-        const average = buffer.reduce((a, b) => a + b, 0) / buffer.length;
-
-        // Raised from 8: with AGC off, ambient room noise typically sits well under this,
-        // while actual speech reliably clears it.
-        if (average > 14) {
-          lastSpeechTime = Date.now();
-        } else if (Date.now() - lastSpeechTime > silenceMs) {
-          if (recorder.state === "recording") recorder.stop();
+      recognition.onstart = () => {
+        if (!activeRef.current) {
+          recognition.abort();
           return;
         }
-
-        requestAnimationFrame(checkSilence);
+        setPhase("listening");
+        setErrorMessage("");
       };
 
-      setTimeout(() => {
-        if (isCurrent(gen) && recorder.state === "recording") checkSilence();
-      }, 1000);
-    } catch (err) {
-      console.error("VAD setup error:", err);
+      recognition.onresult = (event: any) => {
+        if (!activeRef.current) return;
+        let interim = "";
+        let final = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const result = event.results[i];
+          const text = result[0].transcript;
+          if (result.isFinal) {
+            final += text;
+          } else {
+            interim += text;
+          }
+        }
+
+        const currentText = final || interim;
+        transcriptBufferRef.current = currentText;
+        setLiveTranscript(currentText);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("Speech recognition event error:", event.error);
+        if (event.error === "no-speech") {
+          setErrorMessage("I didn't catch that. Click Speak to try again.");
+          setPhase("idle");
+        } else if (event.error === "not-allowed") {
+          setPhase("error");
+          setErrorMessage("Microphone access denied. Please allow microphone permissions in browser.");
+        } else if (event.error !== "aborted") {
+          setPhase("error");
+          setErrorMessage("Voice capture error. Click Speak to retry.");
+        }
+      };
+
+      recognition.onend = () => {
+        const capturedText = transcriptBufferRef.current.trim();
+        if (capturedText && activeRef.current && !isSubmittingRef.current) {
+          submitQuery(capturedText);
+        } else if (activeRef.current && !isSubmittingRef.current) {
+          setPhase("idle");
+        }
+      };
+
+      recognition.start();
+    } catch (err: any) {
+      console.error("Failed to start speech recognition:", err);
+      setPhase("error");
+      setErrorMessage("Could not initialize microphone. Please check permissions.");
     }
-  }
+  }, [languageCode, stopPlayback, stopRecognition, submitQuery]);
 
-  function start() {
-    if (activeRef.current) return;
-    activeRef.current = true;
-    generationRef.current += 1;
-    const gen = generationRef.current;
-    sessionIdRef.current = crypto.randomUUID();
-    setErrorMessage("");
-    listenOnce(gen);
-  }
-
-  /** Force the current listening turn to submit immediately instead of waiting for silence. */
-  function stopListeningNow() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+  // Stop listening manually and submit whatever was spoken
+  const stopListeningNow = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore
+      }
     }
-  }
+    const captured = transcriptBufferRef.current.trim() || liveTranscript.trim();
+    if (captured && !isSubmittingRef.current) {
+      submitQuery(captured);
+    } else {
+      setPhase("idle");
+    }
+  }, [liveTranscript, submitQuery]);
 
-  /** Interrupt playback (barge-in) and resume listening right away. */
-  function interrupt() {
-    stopPlayback();
-    if (activeRef.current) listenOnce(generationRef.current);
-  }
-
-  // Cleanup on unmount only — `exit` is recreated every render, so this must not
-  // be in the dependency array or the mic would be torn down on every re-render.
-  const exitRef = useRef(exit);
-  exitRef.current = exit;
+  // Cleanup on unmount
   useEffect(() => {
-    return () => exitRef.current();
-  }, []);
+    return () => {
+      activeRef.current = false;
+      stopRecognition();
+      stopPlayback();
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+    };
+  }, [stopRecognition, stopPlayback]);
 
   return {
     phase,
+    liveTranscript,
     errorMessage,
+    currentAiResponse,
     isActive: phase !== "idle",
     start,
     exit,
     stopListeningNow,
-    interrupt,
+    stopPlayback
   };
 }

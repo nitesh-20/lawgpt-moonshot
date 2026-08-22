@@ -12,7 +12,12 @@ import {
   Volume2,
   FileText,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  Mic,
+  MicOff,
+  AlertCircle,
+  VolumeX,
+  RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +27,6 @@ import { apiClient } from "@/utils/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import { AudioPlaybackButton } from "@/components/voice/AudioPlaybackButton";
 import { useHandsFreeVoiceChat } from "@/hooks/useHandsFreeVoiceChat";
-import { Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Chatbot = () => {
@@ -39,8 +43,13 @@ const Chatbot = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming]);
 
-  // Hands-free conversational Voice AI: record -> transcribe+answer+synthesize -> speak -> listen again.
+  // Hands-free conversational Voice Assistant
   const handsFreeVoice = useHandsFreeVoiceChat({
+    getDocumentContext: () => {
+      return documents.length > 0
+        ? documents.map(doc => `Document "${doc.name}":\n${doc.content}`).join('\n\n')
+        : '';
+    },
     onResult: (result) => {
       setMessages((prev) => [
         ...prev,
@@ -59,16 +68,9 @@ const Chatbot = () => {
       ]);
     },
     onError: (msg) => {
-      toast({ title: "Voice Assistant Error", description: msg, variant: "destructive" });
+      toast({ title: "Voice Notice", description: msg, variant: "destructive" });
     }
   });
-
-  const VOICE_PHASE_LABEL: Record<string, string> = {
-    listening: "Listening",
-    thinking: "Thinking",
-    speaking: "Speaking",
-    error: "Error"
-  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -189,7 +191,7 @@ const Chatbot = () => {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-              <Mic className="h-4.5 w-4.5 text-emerald-600 animate-pulse" />
+              <Mic className="h-4.5 w-4.5 text-emerald-600" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 font-sans">Voice Assistant</h1>
           </div>
@@ -227,8 +229,8 @@ const Chatbot = () => {
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-sans font-extrabold text-lg text-slate-900 tracking-tight">Consult Voice Assistant</h3>
-                  <p className="text-xs text-slate-450 leading-relaxed font-serif">
-                    Start a conversation using voice commands. Attach reference agreements or ask questions to analyze liability clauses, verify section bounds, or draft clauses.
+                  <p className="text-xs text-slate-500 leading-relaxed font-serif">
+                    Start a conversation using voice or text. Attach reference agreements or ask questions to analyze liability clauses, verify section bounds, or draft clauses.
                   </p>
                 </div>
 
@@ -237,7 +239,7 @@ const Chatbot = () => {
                     <button
                       key={idx}
                       onClick={() => { setMessage(prompt); }}
-                      className="w-full p-3 text-left bg-neutral-50/50 border border-neutral-200 hover:border-emerald-600/40 rounded-xl text-2xs font-semibold text-slate-700 hover:text-emerald-700 transition-all flex justify-between items-center group shadow-3xs"
+                      className="w-full p-3 text-left bg-neutral-50/50 border border-neutral-200 hover:border-emerald-600/40 rounded-xl text-2xs font-semibold text-slate-700 hover:text-emerald-700 transition-all flex justify-between items-center group shadow-3xs cursor-pointer"
                     >
                       <span>{prompt}</span>
                       <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors shrink-0 ml-2" />
@@ -256,7 +258,7 @@ const Chatbot = () => {
                     >
                       {isBot && (
                         <div className="w-8 h-8 rounded bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-                          <Mic className="h-4.5 w-4.5 text-emerald-650" />
+                          <Bot className="h-4.5 w-4.5 text-emerald-650" />
                         </div>
                       )}
 
@@ -297,7 +299,7 @@ const Chatbot = () => {
                 {isStreaming && (
                   <div className="flex gap-4 justify-start">
                     <div className="w-8 h-8 rounded bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-                      <Mic className="h-4.5 w-4.5 text-emerald-650 animate-pulse" />
+                      <Bot className="h-4.5 w-4.5 text-emerald-650 animate-pulse" />
                     </div>
                     <div className="p-4 bg-white border border-neutral-200 rounded-2xl flex items-center gap-1.5 shadow-3xs">
                       <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce" />
@@ -316,10 +318,10 @@ const Chatbot = () => {
           <div className="p-4 border-t border-neutral-150 bg-neutral-50/50 shrink-0">
             <form onSubmit={handleSend} className="relative">
               <textarea
-                placeholder="Message Voice Assistant..."
+                placeholder="Type or click the microphone to speak..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                disabled={isStreaming}
+                disabled={isStreaming || handsFreeVoice.isActive}
                 rows={1}
                 className="w-full bg-white border border-neutral-200 focus:border-emerald-600 focus:outline-none pl-11 pr-24 py-3 text-xs text-slate-900 placeholder:text-neutral-400 rounded-xl resize-none leading-relaxed"
                 onKeyDown={(e) => {
@@ -354,23 +356,21 @@ const Chatbot = () => {
                   type="button"
                   onClick={handsFreeVoice.isActive ? handsFreeVoice.exit : handsFreeVoice.start}
                   className={cn(
-                    "h-7 w-7 rounded-lg border border-neutral-200 flex items-center justify-center transition-colors shrink-0",
-                    "text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
+                    "h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center transition-colors shrink-0",
+                    handsFreeVoice.isActive
+                      ? "bg-red-50 text-red-600 border-red-200"
+                      : "text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 bg-white"
                   )}
-                  title={handsFreeVoice.isActive ? "Stop Voice Mode" : "Start Voice Mode"}
+                  title={handsFreeVoice.isActive ? "Stop Voice Mode" : "Start Voice Assistant"}
                 >
-                  {handsFreeVoice.isActive ? (
-                    <MicOff className="h-3.5 w-3.5 text-red-500 animate-pulse" />
-                  ) : (
-                    <Mic className="h-3.5 w-3.5" />
-                  )}
+                  <Mic className={cn("h-4 w-4", handsFreeVoice.isActive && "animate-pulse text-red-600")} />
                 </button>
 
                 <Button
                   type="submit"
                   size="icon"
-                  disabled={!message.trim() || isStreaming}
-                  className="bg-emerald-650 hover:bg-emerald-700 text-white rounded-lg h-7 w-7 flex items-center justify-center shrink-0"
+                  disabled={!message.trim() || isStreaming || handsFreeVoice.isActive}
+                  className="bg-emerald-650 hover:bg-emerald-700 text-white rounded-lg h-8 w-8 flex items-center justify-center shrink-0"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </Button>
@@ -416,30 +416,163 @@ const Chatbot = () => {
 
       </div>
 
-      {/* HANDS-FREE VOICE AI OVERLAY */}
-      {handsFreeVoice.isActive && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-center">
-            <Mic className={cn("h-10 w-10 text-emerald-400", handsFreeVoice.phase !== "idle" && "animate-pulse")} />
-          </div>
-          <span className="text-white/90 text-sm font-mono uppercase tracking-widest">
-            {VOICE_PHASE_LABEL[handsFreeVoice.phase] || "Listening"}
-          </span>
-          {handsFreeVoice.phase === "error" ? (
-            <span className="text-red-400 text-xs uppercase tracking-wider font-mono">
-              {handsFreeVoice.errorMessage}
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={handsFreeVoice.phase === "listening" ? handsFreeVoice.stopListeningNow : handsFreeVoice.exit}
-              className="text-white/60 hover:text-white text-xs uppercase tracking-wider font-mono"
+      {/* ===================================================================== */}
+      {/* PROFESSIONAL VOICE ASSISTANT MODAL (MINIMAL, CLEAN LEGAL-TECH UX) */}
+      {/* ===================================================================== */}
+      <AnimatePresence>
+        {handsFreeVoice.isActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center space-y-6"
             >
-              {handsFreeVoice.phase === "listening" ? "Tap to stop" : "Exit Voice Mode"}
-            </button>
-          )}
-        </div>
-      )}
+              {/* STATE 1: LISTENING */}
+              {handsFreeVoice.phase === "listening" && (
+                <div className="space-y-5">
+                  <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                    <span className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-75" />
+                    <div className="relative w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg">
+                      <Mic className="h-7 w-7" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Listening…</h3>
+                    <p className="text-xs text-slate-500">Speak your legal question clearly</p>
+                  </div>
+
+                  {/* Live real-time transcript preview */}
+                  <div className="min-h-[50px] bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-serif text-slate-800 leading-relaxed flex items-center justify-center">
+                    {handsFreeVoice.liveTranscript ? (
+                      <span>"{handsFreeVoice.liveTranscript}"</span>
+                    ) : (
+                      <span className="text-slate-400 italic font-sans">Listening for speech...</span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-2">
+                    <Button
+                      onClick={handsFreeVoice.stopListeningNow}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                    >
+                      Done Speaking
+                    </Button>
+                    <Button
+                      onClick={handsFreeVoice.exit}
+                      variant="outline"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STATE 2: THINKING */}
+              {handsFreeVoice.phase === "thinking" && (
+                <div className="space-y-5">
+                  <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto">
+                    <Loader2 className="h-7 w-7 text-blue-600 animate-spin" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Thinking…</h3>
+                    <p className="text-xs text-slate-500">Reviewing legal sources and crafting answer...</p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-serif text-slate-800">
+                    "{handsFreeVoice.liveTranscript}"
+                  </div>
+
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      onClick={handsFreeVoice.exit}
+                      variant="outline"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STATE 3: SPEAKING */}
+              {handsFreeVoice.phase === "speaking" && (
+                <div className="space-y-5">
+                  <div className="w-16 h-16 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto">
+                    <Volume2 className="h-7 w-7 text-purple-600 animate-bounce" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Speaking…</h3>
+                    <p className="text-xs text-slate-500">Reading legal answer aloud</p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-serif text-slate-800 max-h-[140px] overflow-y-auto leading-relaxed text-left">
+                    {handsFreeVoice.currentAiResponse}
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-2">
+                    <Button
+                      onClick={handsFreeVoice.start}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                    >
+                      <Mic className="h-3.5 w-3.5 mr-1.5" />
+                      Ask Next Question
+                    </Button>
+                    <Button
+                      onClick={handsFreeVoice.exit}
+                      variant="outline"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                    >
+                      Stop & Close
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STATE 4: ERROR / NO-SPEECH */}
+              {handsFreeVoice.phase === "error" && (
+                <div className="space-y-5">
+                  <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto">
+                    <AlertCircle className="h-7 w-7 text-amber-600" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 font-sans">I didn't catch that</h3>
+                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Please speak your legal question again."}</p>
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-2">
+                    <Button
+                      onClick={handsFreeVoice.start}
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={handsFreeVoice.exit}
+                      variant="outline"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

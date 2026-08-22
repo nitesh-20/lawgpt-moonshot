@@ -173,6 +173,7 @@ class OrchestratorAgent(BaseAgent):
         return {
             "status": "success",
             "message": summary_res["response"],
+            "response": summary_res["response"],
             "citations": summary_res["citations"],
             "context": context,
             "metrics": metrics
