@@ -224,13 +224,18 @@ const Chatbot = () => {
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col justify-center items-center text-center space-y-6 max-w-md mx-auto">
-                <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-full">
-                  <Mic className="h-10 w-10 text-emerald-600" />
-                </div>
+                <button
+                  type="button"
+                  onClick={handsFreeVoice.start}
+                  className="p-5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full transition-all cursor-pointer shadow-xs hover:scale-105 group"
+                  title="Click to Speak"
+                >
+                  <Mic className="h-10 w-10 text-emerald-600 group-hover:scale-110 transition-transform" />
+                </button>
                 <div className="space-y-2">
                   <h3 className="font-sans font-extrabold text-lg text-slate-900 tracking-tight">Consult Voice Assistant</h3>
                   <p className="text-xs text-slate-500 leading-relaxed font-serif">
-                    Start a conversation using voice or text. Attach reference agreements or ask questions to analyze liability clauses, verify section bounds, or draft clauses.
+                    Tap the microphone icon to speak your question, or type below. Attach reference agreements to analyze liability clauses, verify bounds, or draft provisions.
                   </p>
                 </div>
 
@@ -336,7 +341,7 @@ const Chatbot = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-neutral-100 transition-colors"
+                  className="rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-neutral-100 transition-colors cursor-pointer"
                   title="Attach Files"
                 >
                   <Paperclip className="h-4 w-4" />
@@ -356,7 +361,7 @@ const Chatbot = () => {
                   type="button"
                   onClick={handsFreeVoice.isActive ? handsFreeVoice.exit : handsFreeVoice.start}
                   className={cn(
-                    "h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center transition-colors shrink-0",
+                    "h-8 w-8 rounded-lg border border-neutral-200 flex items-center justify-center transition-colors shrink-0 cursor-pointer",
                     handsFreeVoice.isActive
                       ? "bg-red-50 text-red-600 border-red-200"
                       : "text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 bg-white"
@@ -370,7 +375,7 @@ const Chatbot = () => {
                   type="submit"
                   size="icon"
                   disabled={!message.trim() || isStreaming || handsFreeVoice.isActive}
-                  className="bg-emerald-650 hover:bg-emerald-700 text-white rounded-lg h-8 w-8 flex items-center justify-center shrink-0"
+                  className="bg-emerald-650 hover:bg-emerald-700 text-white rounded-lg h-8 w-8 flex items-center justify-center shrink-0 cursor-pointer"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </Button>
@@ -420,7 +425,7 @@ const Chatbot = () => {
       {/* PROFESSIONAL VOICE ASSISTANT MODAL (MINIMAL, CLEAN LEGAL-TECH UX) */}
       {/* ===================================================================== */}
       <AnimatePresence>
-        {handsFreeVoice.isActive && (
+        {handsFreeVoice.isOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -449,7 +454,7 @@ const Chatbot = () => {
                   </div>
 
                   {/* Live real-time transcript preview */}
-                  <div className="min-h-[50px] bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-serif text-slate-800 leading-relaxed flex items-center justify-center">
+                  <div className="min-h-[60px] bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs font-serif text-slate-800 leading-relaxed flex items-center justify-center">
                     {handsFreeVoice.liveTranscript ? (
                       <span>"{handsFreeVoice.liveTranscript}"</span>
                     ) : (
@@ -460,14 +465,14 @@ const Chatbot = () => {
                   <div className="flex justify-center gap-3 pt-2">
                     <Button
                       onClick={handsFreeVoice.stopListeningNow}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold cursor-pointer"
                     >
                       Done Speaking
                     </Button>
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
-                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
                     >
                       Cancel
                     </Button>
@@ -495,7 +500,7 @@ const Chatbot = () => {
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
-                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
                     >
                       Cancel
                     </Button>
@@ -522,7 +527,7 @@ const Chatbot = () => {
                   <div className="flex justify-center gap-3 pt-2">
                     <Button
                       onClick={handsFreeVoice.start}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold cursor-pointer"
                     >
                       <Mic className="h-3.5 w-3.5 mr-1.5" />
                       Ask Next Question
@@ -530,7 +535,7 @@ const Chatbot = () => {
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
-                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
                     >
                       Stop & Close
                     </Button>
@@ -538,7 +543,42 @@ const Chatbot = () => {
                 </div>
               )}
 
-              {/* STATE 4: ERROR / NO-SPEECH */}
+              {/* STATE 4: IDLE (READY TO SPEAK / PROMPT) */}
+              {handsFreeVoice.phase === "idle" && (
+                <div className="space-y-5">
+                  <button
+                    type="button"
+                    onClick={handsFreeVoice.start}
+                    className="w-20 h-20 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center mx-auto cursor-pointer hover:scale-105 transition-all shadow-xs"
+                  >
+                    <Mic className="h-9 w-9 text-emerald-600" />
+                  </button>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Ready to Listen</h3>
+                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Tap the microphone to speak your legal question."}</p>
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-2">
+                    <Button
+                      onClick={handsFreeVoice.start}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs h-9 px-5 font-semibold cursor-pointer"
+                    >
+                      <Mic className="h-3.5 w-3.5 mr-1.5" />
+                      Tap to Speak
+                    </Button>
+                    <Button
+                      onClick={handsFreeVoice.exit}
+                      variant="outline"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STATE 5: ERROR */}
               {handsFreeVoice.phase === "error" && (
                 <div className="space-y-5">
                   <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto">
@@ -546,14 +586,14 @@ const Chatbot = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <h3 className="text-base font-bold text-slate-900 font-sans">I didn't catch that</h3>
-                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Please speak your legal question again."}</p>
+                    <h3 className="text-base font-bold text-slate-900 font-sans">Voice Notification</h3>
+                    <p className="text-xs text-slate-500">{handsFreeVoice.errorMessage || "Please allow microphone permissions or tap below to retry."}</p>
                   </div>
 
                   <div className="flex justify-center gap-3 pt-2">
                     <Button
                       onClick={handsFreeVoice.start}
-                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs h-9 px-5 font-semibold"
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs h-9 px-5 font-semibold cursor-pointer"
                     >
                       <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                       Try Again
@@ -561,7 +601,7 @@ const Chatbot = () => {
                     <Button
                       onClick={handsFreeVoice.exit}
                       variant="outline"
-                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600"
+                      className="rounded-xl text-xs h-9 px-4 border-slate-200 text-slate-600 cursor-pointer"
                     >
                       Close
                     </Button>

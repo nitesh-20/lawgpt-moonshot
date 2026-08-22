@@ -31,6 +31,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
   const [liveTranscript, setLiveTranscript] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [currentAiResponse, setCurrentAiResponse] = useState<string>("");
+  const [isOpen, setIsOpen] = useState(false);
 
   const activeRef = useRef(false);
   const isSubmittingRef = useRef(false);
@@ -79,6 +80,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     stopRecognition();
     stopPlayback();
     setPhase("idle");
+    setIsOpen(false);
     setLiveTranscript("");
     setErrorMessage("");
     setCurrentAiResponse("");
@@ -88,9 +90,8 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
   const submitQuery = useCallback(async (queryText: string) => {
     const trimmed = queryText.trim();
     if (!trimmed) {
-      setErrorMessage("I didn't catch that. Please speak again.");
+      setErrorMessage("No speech detected. Tap Speak to try again.");
       setPhase("idle");
-      activeRef.current = false;
       return;
     }
 
@@ -129,7 +130,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
         return;
       }
 
-      const botReply = response?.response || response?.message || "I have analyzed your request.";
+      const botReply = response?.response || response?.message || "I have processed your legal query.";
       const citations = response?.citations || [];
 
       // Add to chat messages
@@ -146,7 +147,6 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
         stopPlayback();
         setPhase("speaking");
 
-        // Clean any markdown formatting for natural TTS reading
         const cleanSpeakText = botReply
           .replace(/[*_#`~\[\]\(\)]/g, " ")
           .replace(/\n+/g, ". ")
@@ -194,18 +194,16 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
         const msg = err?.message || "Failed to get AI answer. Please try again.";
         setErrorMessage(msg);
         onError?.(msg);
-        setTimeout(() => {
-          if (activeRef.current) setPhase("idle");
-        }, 3000);
       }
     }
   }, [getDocumentContext, languageCode, onResult, onError, stopPlayback]);
 
   // Start listening session
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     stopPlayback();
     stopRecognition();
 
+    setIsOpen(true);
     activeRef.current = true;
     isSubmittingRef.current = false;
     transcriptBufferRef.current = "";
@@ -214,13 +212,24 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     setCurrentAiResponse("");
     setPhase("listening");
 
+    // Request microphone permission if needed
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately release media stream tracks since SpeechRecognition manages its own stream
+        stream.getTracks().forEach(t => t.stop());
+      }
+    } catch (permErr) {
+      console.warn("Mic permission check notice:", permErr);
+    }
+
     const SpeechRecognitionClass = typeof window !== "undefined" 
       ? (window.SpeechRecognition || window.webkitSpeechRecognition) 
       : null;
 
     if (!SpeechRecognitionClass) {
       setPhase("error");
-      setErrorMessage("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      setErrorMessage("Speech recognition is not supported in this browser. Please use Google Chrome, Edge, or Safari.");
       return;
     }
 
@@ -234,7 +243,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
 
       recognition.onstart = () => {
         if (!activeRef.current) {
-          recognition.abort();
+          try { recognition.abort(); } catch(e){}
           return;
         }
         setPhase("listening");
@@ -262,16 +271,17 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
       };
 
       recognition.onerror = (event: any) => {
-        console.warn("Speech recognition event error:", event.error);
+        console.warn("Speech recognition event notice:", event.error);
         if (event.error === "no-speech") {
-          setErrorMessage("I didn't catch that. Click Speak to try again.");
+          // If no speech detected in this round, keep modal open
+          setErrorMessage("No speech detected. Tap 'Speak Again' when ready.");
           setPhase("idle");
         } else if (event.error === "not-allowed") {
           setPhase("error");
-          setErrorMessage("Microphone access denied. Please allow microphone permissions in browser.");
+          setErrorMessage("Microphone access is blocked. Please allow microphone permissions in your browser URL bar.");
         } else if (event.error !== "aborted") {
           setPhase("error");
-          setErrorMessage("Voice capture error. Click Speak to retry.");
+          setErrorMessage("Microphone encountered an issue. Tap 'Speak Again' to retry.");
         }
       };
 
@@ -279,7 +289,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
         const capturedText = transcriptBufferRef.current.trim();
         if (capturedText && activeRef.current && !isSubmittingRef.current) {
           submitQuery(capturedText);
-        } else if (activeRef.current && !isSubmittingRef.current) {
+        } else if (activeRef.current && !isSubmittingRef.current && phase === "listening") {
           setPhase("idle");
         }
       };
@@ -290,7 +300,7 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
       setPhase("error");
       setErrorMessage("Could not initialize microphone. Please check permissions.");
     }
-  }, [languageCode, stopPlayback, stopRecognition, submitQuery]);
+  }, [languageCode, stopPlayback, stopRecognition, submitQuery, phase]);
 
   // Stop listening manually and submit whatever was spoken
   const stopListeningNow = useCallback(() => {
@@ -324,10 +334,12 @@ export function useHandsFreeVoiceChat(options: UseHandsFreeVoiceChatOptions = {}
     liveTranscript,
     errorMessage,
     currentAiResponse,
-    isActive: phase !== "idle",
+    isOpen,
+    isActive: isOpen,
     start,
     exit,
     stopListeningNow,
-    stopPlayback
+    stopPlayback,
+    submitQuery
   };
 }
